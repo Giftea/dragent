@@ -1,5 +1,6 @@
 # Node modules
 /node_modules
+/agent/node_modules
 
 # Compilation output
 /dist
@@ -21,3 +22,7 @@
 
 .env
 .env.local
+
+/agent/.env
+/agent/.env.local
+
