@@ -1,6 +1,10 @@
-import { getMarketSignal }                   from "../../../agent/src/perception/marketData";
-import { interpretStrategy, evaluateSignal } from "../../agent/src/strategy/interpreter";
-import { generateReason, logTradeOnChain }   from "../../agent/src/journal/reasonGenerator";
+import {
+  getMarketSignal,
+  interpretStrategy,
+  evaluateSignal,
+  generateReason,
+  logTradeOnChain
+} from "@dragent/core";
 import { ethers }                            from "ethers";
 import { query }                             from "../db";
 

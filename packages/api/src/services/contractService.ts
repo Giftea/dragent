@@ -10,7 +10,7 @@ const deployer  = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 function loadAbi(contractName: string) {
   const p = path.resolve(
     __dirname,
-    `../../../artifacts/contracts/${contractName}.sol/${contractName}.json`
+   `../../../contracts/artifacts/contracts/${contractName}.sol/${contractName}.json`
   );
   return JSON.parse(fs.readFileSync(p, "utf8")).abi;
 }

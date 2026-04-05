@@ -10,6 +10,8 @@
 
 # Hardhat Build Artifacts
 /artifacts
+/packages/contracts/artifacts
+/packages/contracts/cache
 
 # Hardhat compilation (v2) support directory
 /cache
@@ -23,10 +25,15 @@
 .env
 .env.local
 
-/agent/.env
-/agent/.env.local
-/backend/node_modules
-/backend/.env
+/packages/api/node_modules
+/packages/core/node_modules
+/packages/web/node_modules
 
-/frontend/node_modules
-/frontend/.env.local
+
+/packages/api/.env
+/packages/core/.env
+/packages/web/.env
+/packages/web/.env.local
+
+*.log
+.DS_Store

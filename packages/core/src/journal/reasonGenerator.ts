@@ -1,7 +1,29 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { ethers }  from "ethers";
+import { ethers } from "ethers";
+import * as fs from "fs";
+import * as path from "path";
+import * as dotenv from "dotenv";
+dotenv.config();
+
+// ── Provider + wallet ─────────────────────────────────────
+const provider = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
+const wallet   = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+
+// ── Load TradeJournal ABI + contract ──────────────────────
+function loadAbi(contractName: string) {
+  const p = path.resolve(
+    __dirname,
+    `../../../contracts/artifacts/contracts/${contractName}.sol/${contractName}.json`
+  );
+  return JSON.parse(fs.readFileSync(p, "utf8")).abi;
+}
+
+const tradeJournal = new ethers.Contract(
+  process.env.TRADE_JOURNAL_ADDRESS!,
+  loadAbi("TradeJournal"),
+  wallet
+);
 import { MarketSignal } from "../perception/marketData";
-import { tradeJournal, wallet } from "../contracts";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 

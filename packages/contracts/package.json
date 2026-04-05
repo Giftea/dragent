@@ -1,0 +1,22 @@
+{
+  "name": "@dragent/contracts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "compile": "hardhat compile",
+    "deploy": "hardhat run scripts/deploy.ts --network kite_testnet",
+    "deploy:factory": "hardhat run scripts/deployFactory.ts --network kite_testnet",
+    "wire": "hardhat run scripts/wire.ts --network kite_testnet",
+    "wire:factory": "hardhat run scripts/wireFactory.ts --network kite_testnet"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.0.7",
+    "dotenv": "^16.0.0",
+    "hardhat": "^3.3.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.0.0",
+    "ethers": "^6.0.0"
+  }
+}
