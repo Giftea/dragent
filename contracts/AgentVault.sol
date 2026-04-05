@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import "./interfaces/IReputationRegistry.sol";
+
 interface IERC20 {
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
-}
-
-interface IReputationRegistry {
-    function getTier(address agentId) external view returns (uint8);
-    function getBudgetLimit(address agentId) external view returns (uint256);
-    function recordTrade(address agentId, bool won, int256 pnlBps) external;
 }
 
 contract AgentVault {
@@ -81,7 +77,7 @@ contract AgentVault {
         uint256 _maxDailySpendUSDC,
         uint256 _cooldownSeconds
     ) {
-        owner               = msg.sender;
+        owner               = tx.origin;
         settlementToken     = IERC20(_settlementToken);
         reputationRegistry  = IReputationRegistry(_reputationRegistry);
         agent               = _agent;
