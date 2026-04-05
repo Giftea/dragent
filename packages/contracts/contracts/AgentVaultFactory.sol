@@ -79,10 +79,10 @@ contract AgentVaultFactory {
         allVaults.push(vault);
 
         // Authorize agent in TradeJournal
-        ITradeJournal(tradeJournal).authorizeAgent(agentAddress);
+        // ITradeJournal(tradeJournal).authorizeAgent(agentAddress);
 
         // Authorize vault in ReputationRegistry
-        IReputationRegistry(reputationRegistry).authorizeCaller(vault);
+        // IReputationRegistry(reputationRegistry).authorizeCaller(vault);
 
         emit VaultCreated(msg.sender, agentAddress, vault, block.timestamp);
     }
