@@ -1,7 +1,7 @@
 # Node modules
 /node_modules
 /agent/node_modules
-
+.claude
 # Compilation output
 /dist
 
@@ -37,3 +37,4 @@
 
 *.log
 .DS_Store
+.vscode

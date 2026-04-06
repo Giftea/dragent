@@ -1,65 +1,136 @@
-import Image from "next/image";
+import Link           from "next/link";
+import { Button }     from "@/components/ui/button";
+import { Badge }      from "@/components/ui/badge";
+import { Separator }  from "@/components/ui/separator";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="min-h-screen bg-black text-white">
+
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
+        <div className="flex items-center gap-2">
+          <span className="text-xl font-semibold tracking-tight">Dragent</span>
+          <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400">
+            Testnet
+          </Badge>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="ghost" className="text-zinc-400 hover:text-white">
+              Dashboard
+            </Button>
+          </Link>
+          <Link href="/launch">
+            <Button className="bg-white text-black hover:bg-zinc-200">
+              Launch app
+            </Button>
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="flex flex-col items-center text-center px-6 pt-32 pb-24">
+        <Badge className="mb-6 bg-zinc-900 text-zinc-300 border border-zinc-700 px-3 py-1">
+          Built on Kite chain
+        </Badge>
+        <h1 className="text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-none">
+          Your AI trading agent.{" "}
+          <span className="text-zinc-400">Every decision, verified on-chain.</span>
+        </h1>
+        <p className="mt-8 text-lg text-zinc-400 max-w-xl leading-relaxed">
+          Write your strategy in plain English. Dragent executes autonomously,
+          explains every trade, and builds a verifiable reputation over time.
+          No black boxes. No blind trust.
+        </p>
+        <div className="flex items-center gap-4 mt-10">
+          <Link href="/launch">
+            <Button size="lg" className="bg-white text-black hover:bg-zinc-200 px-8">
+              Deploy your agent
+            </Button>
+          </Link>
+          <Link href="/passport/1">
+            <Button size="lg" variant="outline" className="border-zinc-700 text-zinc-300 px-8">
+              View demo passport
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      <Separator className="bg-zinc-800" />
+
+      {/* How it works */}
+      <section className="px-8 py-24 max-w-5xl mx-auto">
+        <h2 className="text-2xl font-semibold mb-12 text-center">How it works</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {[
+            {
+              step: "01",
+              title: "Write your strategy",
+              body: "Describe your trading rules in plain English. Claude parses your intent into executable logic.",
+            },
+            {
+              step: "02",
+              title: "Agent executes autonomously",
+              body: "Dragent monitors markets 24/7, makes decisions, and executes trades — no human input needed.",
+            },
+            {
+              step: "03",
+              title: "Every trade proven on Kite",
+              body: "Before each trade, the agent commits a cryptographic proof of its reasoning to Kite chain. Immutable. Verifiable.",
+            },
+          ].map((item) => (
+            <div key={item.step} className="flex flex-col gap-3">
+              <span className="text-4xl font-bold text-zinc-800">{item.step}</span>
+              <h3 className="text-lg font-medium">{item.title}</h3>
+              <p className="text-zinc-400 text-sm leading-relaxed">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <Separator className="bg-zinc-800" />
+
+      {/* Stats */}
+      <section className="px-8 py-20 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {[
+            { value: "100%",    label: "Trades explained" },
+            { value: "On-chain", label: "Reputation system" },
+            { value: "0",       label: "Black boxes" },
+            { value: "Kite L1", label: "Settlement layer" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="text-2xl font-bold">{stat.value}</p>
+              <p className="text-sm text-zinc-500 mt-1">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-800 px-8 py-8 flex items-center justify-between">
+        <span className="text-zinc-600 text-sm">Dragent — built on Kite chain</span>
+        <div className="flex gap-6 text-sm text-zinc-600">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="https://testnet.kitescan.ai"
             target="_blank"
             rel="noopener noreferrer"
+            className="hover:text-zinc-400"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
+            Explorer
           </a>
           <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href="https://github.com/dragent-ai"
             target="_blank"
             rel="noopener noreferrer"
+            className="hover:text-zinc-400"
           >
-            Documentation
+            GitHub
           </a>
         </div>
-      </main>
-    </div>
+      </footer>
+
+    </main>
   );
 }
