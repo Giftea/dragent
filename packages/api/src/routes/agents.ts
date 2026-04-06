@@ -1,6 +1,10 @@
 import { Router } from "express";
-import { query }  from "../db";
-import { deployUserVault, getAgentStats, getRecentTrades } from "../services/contractService";
+import { query } from "../db";
+import {
+  deployUserVault,
+  getAgentStats,
+  getRecentTrades,
+} from "../services/contractService";
 import { startAgent, stopAgent } from "../agents/agentRunner";
 import { ethers } from "ethers";
 
@@ -12,29 +16,29 @@ router.post("/", async (req, res) => {
     const { walletAddress, strategy, rules } = req.body;
 
     if (!walletAddress || !strategy) {
-      return res.status(400).json({ error: "walletAddress and strategy required" });
+      return res
+        .status(400)
+        .json({ error: "walletAddress and strategy required" });
     }
 
     // Get or create user
-    let userRes = await query(
-      "SELECT id FROM users WHERE wallet = $1",
-      [walletAddress.toLowerCase()]
-    );
+    let userRes = await query("SELECT id FROM users WHERE wallet = $1", [
+      walletAddress.toLowerCase(),
+    ]);
 
     if (userRes.rows.length === 0) {
       userRes = await query(
         "INSERT INTO users (wallet) VALUES ($1) RETURNING id",
-        [walletAddress.toLowerCase()]
+        [walletAddress.toLowerCase()],
       );
     }
 
     const userId = userRes.rows[0].id;
 
     // Check user doesn't already have an agent
-    const existing = await query(
-      "SELECT id FROM agents WHERE user_id = $1",
-      [userId]
-    );
+    const existing = await query("SELECT id FROM agents WHERE user_id = $1", [
+      userId,
+    ]);
 
     if (existing.rows.length > 0) {
       return res.status(400).json({ error: "User already has an agent" });
@@ -53,20 +57,25 @@ router.post("/", async (req, res) => {
         (user_id, wallet, vault_address, strategy, rules, status)
        VALUES ($1, $2, $3, $4, $5, 'inactive')
        RETURNING id`,
-      [userId, agentWallet.address, vaultAddress, strategy, JSON.stringify(rules)]
+      [
+        userId,
+        agentWallet.address,
+        vaultAddress,
+        strategy,
+        JSON.stringify(rules),
+      ],
     );
 
     const agentId = agentRes.rows[0].id;
 
     return res.status(201).json({
       agentId,
-      agentWallet:  agentWallet.address,
+      agentWallet: agentWallet.address,
       vaultAddress,
       strategy,
-      status:       "inactive",
-      message:      "Agent created. Call /start to activate."
+      status: "inactive",
+      message: "Agent created. Call /start to activate.",
     });
-
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to create agent" });
@@ -77,10 +86,7 @@ router.post("/", async (req, res) => {
 router.post("/:id/start", async (req, res) => {
   try {
     const agentId = parseInt(req.params.id);
-    const agent   = await query(
-      "SELECT * FROM agents WHERE id = $1",
-      [agentId]
-    );
+    const agent = await query("SELECT * FROM agents WHERE id = $1", [agentId]);
 
     if (agent.rows.length === 0) {
       return res.status(404).json({ error: "Agent not found" });
@@ -89,10 +95,10 @@ router.post("/:id/start", async (req, res) => {
     const a = agent.rows[0];
     await startAgent({
       agentId,
-      agentWallet:  a.wallet,
+      agentWallet: a.wallet,
       vaultAddress: a.vault_address,
-      strategy:     a.strategy,
-      privateKey:   process.env.PRIVATE_KEY!, // server-managed key for now
+      strategy: a.strategy,
+      privateKey: process.env.PRIVATE_KEY!, // server-managed key for now
     });
 
     return res.json({ status: "active", agentId });
@@ -118,18 +124,17 @@ router.post("/:id/stop", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const agentId = parseInt(req.params.id);
-    const agentRes = await query(
-      "SELECT * FROM agents WHERE id = $1",
-      [agentId]
-    );
+    const agentRes = await query("SELECT * FROM agents WHERE id = $1", [
+      agentId,
+    ]);
 
     if (agentRes.rows.length === 0) {
       return res.status(404).json({ error: "Agent not found" });
     }
 
-    const agent      = agentRes.rows[0];
+    const agent = agentRes.rows[0];
     const chainStats = await getAgentStats(agent.wallet);
-    const trades     = await getRecentTrades(agent.wallet, 10);
+    const trades = await getRecentTrades(agent.wallet, 10);
 
     return res.json({
       ...agent,
@@ -146,14 +151,34 @@ router.get("/:id", async (req, res) => {
 router.get("/:id/trades", async (req, res) => {
   try {
     const agentId = parseInt(req.params.id);
-    const trades  = await query(
+    const trades = await query(
       "SELECT * FROM trades WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 50",
-      [agentId]
+      [agentId],
     );
     return res.json(trades.rows);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch trades" });
+  }
+});
+
+// GET /api/agents/by-wallet/:wallet
+router.get("/by-wallet/:wallet", async (req, res) => {
+  try {
+    const wallet = req.params.wallet.toLowerCase();
+    const result = await query(
+      `SELECT a.id as "agentId" FROM agents a
+       JOIN users u ON u.id = a.user_id
+       WHERE u.wallet = $1 LIMIT 1`,
+      [wallet],
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "No agent found" });
+    }
+    return res.json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to check agent" });
   }
 });
 

@@ -40,3 +40,8 @@ export async function getAgentTrades(agentId: number) {
   const res = await api.get(`/api/agents/${agentId}/trades`);
   return res.data;
 }
+
+export async function getAgentByWallet(wallet: string) {
+  const res = await api.get(`/api/agents/by-wallet/${wallet}`);
+  return res.data;
+}

@@ -16,7 +16,7 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { parseStrategy, createAgent, startAgent } from "@/lib/api";
 import { AppKitButton } from "@reown/appkit/react";
-import { useAppKit } from "@reown/appkit/react";
+import { getAgentByWallet } from "@/lib/api";
 import { useAppKitAccount } from "@reown/appkit/react";
 
 type Step = "connect" | "strategy" | "preview" | "deploying" | "done";
@@ -91,11 +91,24 @@ export default function LaunchPage() {
       setStep("preview");
     }
   };
+
   useEffect(() => {
-    if (isConnected && step === "connect") {
+    if (isConnected && address && step === "connect") {
+      checkExistingAgent();
+    }
+  }, [isConnected, address, step]);
+
+  const checkExistingAgent = async () => {
+    try {
+      const data = await getAgentByWallet(address!);
+      if (data?.agentId) {
+        router.push(`/dashboard/${data.agentId}`);
+      }
+    } catch {
       setStep("strategy");
     }
-  }, [isConnected, step]);
+  };
+
   return (
     <main className="min-h-screen bg-black text-white">
       <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
