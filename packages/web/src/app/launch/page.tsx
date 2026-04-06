@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { useAccount } from "wagmi";
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,15 +15,34 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { parseStrategy, createAgent, startAgent } from "@/lib/api";
+import { AppKitButton } from "@reown/appkit/react";
+import { useAppKit } from "@reown/appkit/react";
+import { useAppKitAccount } from "@reown/appkit/react";
 
 type Step = "connect" | "strategy" | "preview" | "deploying" | "done";
 
 export default function LaunchPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useAppKitAccount();
   const router = useRouter();
   const [step, setStep] = useState<Step>("connect");
   const [strategy, setStrategy] = useState("");
-  const [rules, setRules] = useState<Record<string, unknown> | null>(null);
+  const [rules, setRules] = useState<{
+    entryConditions: {
+      rsiBelow: number | null;
+      rsiAbove: number | null;
+      priceChangePct: number | null;
+      trendRequired: string | null;
+      minConfidence: number;
+    };
+    riskRules: {
+      maxRiskPctPerTrade: number;
+      maxDrawdownPct: number;
+      stopLossPct: number;
+      takeProfitPct: number;
+    };
+    assets: string[];
+    direction: string;
+  } | null>(null);
   const [parsing, setParsing] = useState(false);
   const [agentData, setAgentData] = useState<{
     agentId: number;
@@ -74,19 +91,22 @@ export default function LaunchPage() {
       setStep("preview");
     }
   };
-
+  useEffect(() => {
+    if (isConnected && step === "connect") {
+      setStep("strategy");
+    }
+  }, [isConnected, step]);
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
         <a href="/" className="text-lg font-semibold tracking-tight">
           Dragent
         </a>
-        <ConnectButton />
+        {/* <ConnectButton /> */}
+        <AppKitButton />
       </nav>
 
       <div className="max-w-2xl mx-auto px-6 py-16">
-        {/* Progress indicator */}
         <div className="flex items-center gap-3 mb-12">
           {(
             ["connect", "strategy", "preview", "deploying", "done"] as Step[]
@@ -125,17 +145,6 @@ export default function LaunchPage() {
                 agent and one vault on Kite chain.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col gap-4">
-              <ConnectButton />
-              {isConnected && (
-                <Button
-                  className="bg-white text-black hover:bg-zinc-200 w-full"
-                  onClick={handleWalletConnected}
-                >
-                  Continue →
-                </Button>
-              )}
-            </CardContent>
           </Card>
         )}
 
@@ -193,23 +202,54 @@ export default function LaunchPage() {
               <Separator className="bg-zinc-800" />
 
               {/* Parsed rules */}
+              {/* Parsed rules */}
               <div className="flex flex-col gap-3">
                 <p className="text-xs text-zinc-500 uppercase tracking-wider">
                   Parsed rules
                 </p>
-                {Object.entries(rules).map(([key, val]) => (
-                  <div
-                    key={key}
-                    className="flex items-start justify-between gap-4"
-                  >
-                    <span className="text-sm text-zinc-400 capitalize">
-                      {key.replace(/([A-Z])/g, " $1").trim()}
-                    </span>
-                    <span className="text-sm text-white text-right font-mono">
-                      {JSON.stringify(val)}
-                    </span>
-                  </div>
-                ))}
+
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    {
+                      label: "RSI entry below",
+                      value: rules.entryConditions?.rsiBelow ?? "—",
+                    },
+                    {
+                      label: "Trend required",
+                      value: rules.entryConditions?.trendRequired ?? "any",
+                    },
+                    {
+                      label: "Min confidence",
+                      value: (rules.entryConditions?.minConfidence ?? 0) + "%",
+                    },
+                    {
+                      label: "Max risk/trade",
+                      value: (rules.riskRules?.maxRiskPctPerTrade ?? 0) + "%",
+                    },
+                    {
+                      label: "Stop loss",
+                      value: (rules.riskRules?.stopLossPct ?? 0) + "%",
+                    },
+                    {
+                      label: "Take profit",
+                      value: (rules.riskRules?.takeProfitPct ?? 0) + "%",
+                    },
+                    { label: "Assets", value: (rules.assets ?? []).join(", ") },
+                    { label: "Direction", value: rules.direction ?? "—" },
+                  ].map((item) => (
+                    <div
+                      key={item.label}
+                      className="flex flex-col gap-1 bg-zinc-800 rounded-md px-3 py-2"
+                    >
+                      <span className="text-xs text-zinc-500">
+                        {item.label}
+                      </span>
+                      <span className="text-sm text-white font-medium capitalize">
+                        {String(item.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <Separator className="bg-zinc-800" />
