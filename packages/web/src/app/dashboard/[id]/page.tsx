@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { useState } from "react";
 import { useAppKitAccount } from "@reown/appkit/react";
+import EditStrategyModal from "@/components/EditStrategyModal";
 
 function StatCard({
   label,
@@ -43,7 +44,7 @@ export default function DashboardPage() {
   const agentId = Number(id);
   const [acting, setActing] = useState(false);
   const { address } = useAppKitAccount();
-
+  const [editingStrategy, setEditingStrategy] = useState(false);
   const {
     data: agent,
     isLoading,
@@ -162,7 +163,27 @@ export default function DashboardPage() {
                 </Badge>
               )}
             </div>
-            <p className="text-sm text-zinc-500 max-w-xl">{agent?.strategy}</p>
+            <div
+              style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}
+            >
+              <p className="text-sm text-zinc-500 max-w-xl">
+                {agent?.strategy}
+              </p>
+              <button
+                onClick={() => setEditingStrategy(true)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#71717a",
+                  cursor: "pointer",
+                  fontSize: "12px",
+                  whiteSpace: "nowrap",
+                  paddingTop: "2px",
+                }}
+              >
+                Edit ✏️
+              </button>
+            </div>
             <a
               href={`https://t.me/dragent_alerts_bot?start=${address}`}
               target="_blank"
@@ -304,6 +325,14 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      {editingStrategy && agent && (
+        <EditStrategyModal
+          agentId={agentId}
+          currentStrategy={agent.strategy}
+          onUpdated={refetch}
+          onClose={() => setEditingStrategy(false)}
+        />
+      )}
     </main>
   );
 }

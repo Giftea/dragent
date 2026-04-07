@@ -182,4 +182,28 @@ router.get("/by-wallet/:wallet", async (req, res) => {
   }
 });
 
+// PATCH /api/agents/:id/strategy
+router.patch("/:id/strategy", async (req, res) => {
+  try {
+    const agentId          = parseInt(req.params.id);
+    const { strategy, rules } = req.body;
+
+    if (!strategy || !rules) {
+      return res.status(400).json({ error: "strategy and rules required" });
+    }
+
+    await query(
+      `UPDATE agents 
+       SET strategy = $1, rules = $2, updated_at = NOW() 
+       WHERE id = $3`,
+      [strategy, JSON.stringify(rules), agentId]
+    );
+
+    return res.json({ success: true, message: "Strategy updated. Agent will use new rules on next cycle." });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to update strategy" });
+  }
+});
+
 export default router;

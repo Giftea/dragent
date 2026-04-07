@@ -45,3 +45,15 @@ export async function getAgentByWallet(wallet: string) {
   const res = await api.get(`/api/agents/by-wallet/${wallet}`);
   return res.data;
 }
+
+export async function updateStrategy(
+  agentId: number,
+  strategy: string,
+  rules: unknown,
+) {
+  const res = await api.patch(`/api/agents/${agentId}/strategy`, {
+    strategy,
+    rules,
+  });
+  return res.data;
+}
