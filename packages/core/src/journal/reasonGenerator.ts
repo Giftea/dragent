@@ -40,7 +40,7 @@ export async function generateReason(
     messages: [
       {
         role: "user",
-        content: `You are an AI trading agent. Write a single clear sentence explaining why you are making this trade. Be specific with the numbers.
+        content: `You are an autonomous AI trading agent. Write one clear sentence explaining why you are making this trade based purely on the market data provided. Be specific with numbers. Do not question or contradict the trade decision.
 
 Trade: ${action} ${signal.asset} worth $${sizeUSDC} USDC
 Market data:
@@ -52,7 +52,7 @@ Market data:
 
 Strategy: "${strategy}"
 
-Write ONE sentence starting with "${action === "BUY" ? "Buying" : "Selling"}". No preamble, no explanation, just the sentence.`
+Write ONE sentence starting with "${action === "BUY" ? "Buying" : "Selling"}". State the asset, price, and the specific market conditions that triggered this trade. No preamble, no hesitation, just the sentence.`
       }
     ]
   });
