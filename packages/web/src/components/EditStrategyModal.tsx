@@ -54,6 +54,7 @@ export default function EditStrategyModal({
       toast({
         title: "Parse failed",
         description: "Could not parse strategy. Try rephrasing.",
+        variant: "destructive",
       });
     } finally {
       setParsing(false);
@@ -68,11 +69,12 @@ export default function EditStrategyModal({
       toast({
         title: "Strategy updated",
         description: "Agent will use new rules on next cycle.",
+        variant: "success",
       });
       onUpdated();
       onClose();
     } catch {
-      toast({ title: "Update failed" });
+      toast({ title: "Update failed", variant: "destructive" });
       setStep("preview");
     }
   };
