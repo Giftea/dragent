@@ -3,6 +3,7 @@ import { toast } from "sonner";
 const variantStyles: Record<string, { border: string; title: string }> = {
   success: { border: "#16a34a", title: "#4ade80" },
   destructive: { border: "#dc2626", title: "#f87171" },
+  info: { border: "#2563eb", title: "#60a5fa" },
   default: { border: "#3f3f46", title: "#ffffff" },
 };
 
@@ -15,7 +16,7 @@ export function useToast() {
     }: {
       title: string;
       description?: string;
-      variant?: "default" | "success" | "destructive";
+      variant?: "default" | "success" | "destructive" | "info";
     }) => {
       const { border, title: titleColor } = variantStyles[variant];
       toast(

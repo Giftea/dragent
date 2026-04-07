@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useAppKitAccount } from "@reown/appkit/react";
 import EditStrategyModal from "@/components/EditStrategyModal";
@@ -45,6 +45,8 @@ export default function DashboardPage() {
   const [acting, setActing] = useState(false);
   const { address } = useAppKitAccount();
   const [editingStrategy, setEditingStrategy] = useState(false);
+  const { toast } = useToast();
+
   const {
     data: agent,
     isLoading,
@@ -66,14 +68,29 @@ export default function DashboardPage() {
     try {
       if (agent?.status === "active") {
         await stopAgent(agentId);
-        toast("Agent paused");
+        toast({
+          title: "Agent paused",
+          description:
+            "Agent has been paused and will stop executing trades until reactivated.",
+          variant: "info"
+        });
       } else {
         await startAgent(agentId);
-        toast("Agent activated");
+        toast({
+          title: "Agent activated",
+          description:
+            "Agent is now running and will execute trades when conditions are met.",
+          variant: "success",
+        });
       }
       refetch();
     } catch {
-      toast.error("Action failed");
+      toast({
+        title: "Action failed",
+        description:
+          "An error occurred while trying to perform the action. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setActing(false);
     }

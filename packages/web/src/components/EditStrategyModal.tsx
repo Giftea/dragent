@@ -74,7 +74,11 @@ export default function EditStrategyModal({
       onUpdated();
       onClose();
     } catch {
-      toast({ title: "Update failed", variant: "destructive" });
+      toast({
+        title: "Update failed",
+        description: "Could not update strategy. Please try again.",
+        variant: "destructive",
+      });
       setStep("preview");
     }
   };
