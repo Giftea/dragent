@@ -3,7 +3,8 @@ import {
   interpretStrategy,
   evaluateSignal,
   generateReason,
-  logTradeOnChain
+  logTradeOnChain,
+  TradingRules
 } from "@dragent/core";
 import { ethers }                            from "ethers";
 import { query }                             from "../db";
@@ -27,20 +28,30 @@ export async function startAgent(config: AgentConfig) {
 
   console.log(`🚀 Starting agent ${config.agentId} for vault ${config.vaultAddress}`);
 
-  // Parse strategy once
-  const rules = await interpretStrategy(config.strategy);
-
   const interval = setInterval(async () => {
     try {
-      await runAgentCycle(config, rules);
+      // Reload rules from DB on every cycle — picks up changes instantly
+      const agentRes = await query(
+        "SELECT rules, strategy, status FROM agents WHERE id = $1",
+        [config.agentId]
+      );
+
+      if (!agentRes.rows[0] || agentRes.rows[0].status !== "active") {
+        console.log(`[Agent ${config.agentId}] Skipping — not active`);
+        return;
+      }
+
+      const freshRules = agentRes.rows[0].rules;
+      const strategy   = agentRes.rows[0].strategy;
+
+      await runAgentCycle(config, freshRules, strategy);
     } catch (err) {
       console.error(`Agent ${config.agentId} cycle error:`, err);
     }
-  }, 60_000); // every 60 seconds
+  }, 60_000);
 
   runningAgents.set(config.agentId, interval);
 
-  // Update status in DB
   await query(
     "UPDATE agents SET status = 'active', updated_at = NOW() WHERE id = $1",
     [config.agentId]
@@ -65,14 +76,24 @@ export function getRunningAgents(): number[] {
 }
 
 async function runAgentCycle(
-  config: AgentConfig,
-  rules:  Awaited<ReturnType<typeof interpretStrategy>>
+  config:   AgentConfig,
+  rules:    Record<string, unknown>,
+  strategy: string
 ) {
-  const assets = [{ symbol: "ETH", coinId: "ethereum" }];
+  const assets = (rules.assets as string[]) ?? ["ETH"];
+  const assetMap: Record<string, string> = {
+    ETH: "ethereum",
+    BTC: "bitcoin",
+    SOL: "solana",
+    BNB: "binancecoin",
+    ARB: "arbitrum",
+  };
 
-  for (const { symbol, coinId } of assets) {
-    const signal     = await getMarketSignal(symbol, coinId);
-    const evaluation = evaluateSignal(signal, rules);
+  for (const symbol of assets) {
+    const coinId = assetMap[symbol] ?? "ethereum";
+    const signal = await getMarketSignal(symbol, coinId);
+
+    const evaluation = evaluateSignal(signal, rules as unknown as TradingRules);
 
     console.log(
       `[Agent ${config.agentId}] ${symbol} — RSI: ${signal.rsi} — ${evaluation.action}`
@@ -81,11 +102,13 @@ async function runAgentCycle(
     if (!evaluation.shouldTrade || evaluation.action === "HOLD") continue;
 
     const sizeUSDC = 2;
-    const reason   = await generateReason(
+
+    console.log(`[Agent ${config.agentId}] Generating reason...`);
+    const reason = await generateReason(
       signal,
       evaluation.action,
       sizeUSDC,
-      config.strategy
+      strategy
     );
 
     const { tradeId, reasonHash, txHash } = await logTradeOnChain(
@@ -95,7 +118,6 @@ async function runAgentCycle(
       reason
     );
 
-    // Save to DB for fast frontend reads
     await query(
       `INSERT INTO trades
         (agent_id, trade_id, asset, direction, size_usdc, price_usd, reason, reason_hash, tx_hash)
@@ -113,6 +135,6 @@ async function runAgentCycle(
       ]
     );
 
-    console.log(`[Agent ${config.agentId}] Trade ${tradeId} logged on Kite ✅`);
+    console.log(`[Agent ${config.agentId}] ✅ Trade ${tradeId} logged on Kite`);
   }
 }

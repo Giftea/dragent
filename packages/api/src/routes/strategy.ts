@@ -19,6 +19,8 @@ router.post("/parse", async (req, res) => {
 
 Strategy: "${strategy}"
 
+Supported assets: ETH, BTC, SOL, BNB, ARB
+
 Return ONLY valid JSON, no explanation, no markdown:
 {
   "entryConditions": {
@@ -34,7 +36,7 @@ Return ONLY valid JSON, no explanation, no markdown:
     "stopLossPct": <number, default 5>,
     "takeProfitPct": <number, default 10>
   },
-  "assets": [<array of symbols like "ETH","BTC">],
+  "assets": [<array of symbols from supported assets list>],
   "direction": <"long"|"short"|"both">
 }`
       }]
