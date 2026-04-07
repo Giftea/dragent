@@ -7,6 +7,7 @@ import { query } from "./db";
 import { startAgent } from "./agents/agentRunner";
 import agentRoutes from "./routes/agents";
 import strategyRoutes from "./routes/strategy";
+import telegramRoutes from "./routes/telegram";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,11 +15,12 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// ── Routes ─────────────────────────────────────────────────
+// ── Routes ──
 app.use("/api/agents", agentRoutes);
 app.use("/api/strategy", strategyRoutes);
+app.use("/api/telegram", telegramRoutes);
 
-// ── Health check ───────────────────────────────────────────
+// ── Health check ──
 app.get("/health", (_, res) => {
   res.json({
     status: "ok",

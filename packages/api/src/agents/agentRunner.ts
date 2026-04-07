@@ -4,17 +4,18 @@ import {
   evaluateSignal,
   generateReason,
   logTradeOnChain,
-  TradingRules
+  TradingRules,
 } from "@dragent/core";
-import { ethers }                            from "ethers";
-import { query }                             from "../db";
+import { ethers } from "ethers";
+import { query } from "../db";
+import { notifyTrade } from "../services/notificationService";
 
 interface AgentConfig {
-  agentId:       number;
-  agentWallet:   string;
-  vaultAddress:  string;
-  strategy:      string;
-  privateKey:    string;
+  agentId: number;
+  agentWallet: string;
+  vaultAddress: string;
+  strategy: string;
+  privateKey: string;
 }
 
 // Map of agentId => interval handle
@@ -26,14 +27,16 @@ export async function startAgent(config: AgentConfig) {
     return;
   }
 
-  console.log(`🚀 Starting agent ${config.agentId} for vault ${config.vaultAddress}`);
+  console.log(
+    `🚀 Starting agent ${config.agentId} for vault ${config.vaultAddress}`,
+  );
 
   const interval = setInterval(async () => {
     try {
       // Reload rules from DB on every cycle — picks up changes instantly
       const agentRes = await query(
         "SELECT rules, strategy, status FROM agents WHERE id = $1",
-        [config.agentId]
+        [config.agentId],
       );
 
       if (!agentRes.rows[0] || agentRes.rows[0].status !== "active") {
@@ -42,7 +45,7 @@ export async function startAgent(config: AgentConfig) {
       }
 
       const freshRules = agentRes.rows[0].rules;
-      const strategy   = agentRes.rows[0].strategy;
+      const strategy = agentRes.rows[0].strategy;
 
       await runAgentCycle(config, freshRules, strategy);
     } catch (err) {
@@ -54,7 +57,7 @@ export async function startAgent(config: AgentConfig) {
 
   await query(
     "UPDATE agents SET status = 'active', updated_at = NOW() WHERE id = $1",
-    [config.agentId]
+    [config.agentId],
   );
 }
 
@@ -65,7 +68,7 @@ export async function stopAgent(agentId: number) {
     runningAgents.delete(agentId);
     await query(
       "UPDATE agents SET status = 'inactive', updated_at = NOW() WHERE id = $1",
-      [agentId]
+      [agentId],
     );
     console.log(`⏹ Agent ${agentId} stopped`);
   }
@@ -76,9 +79,9 @@ export function getRunningAgents(): number[] {
 }
 
 async function runAgentCycle(
-  config:   AgentConfig,
-  rules:    Record<string, unknown>,
-  strategy: string
+  config: AgentConfig,
+  rules: Record<string, unknown>,
+  strategy: string,
 ) {
   const assets = (rules.assets as string[]) ?? ["ETH"];
   const assetMap: Record<string, string> = {
@@ -96,7 +99,7 @@ async function runAgentCycle(
     const evaluation = evaluateSignal(signal, rules as unknown as TradingRules);
 
     console.log(
-      `[Agent ${config.agentId}] ${symbol} — RSI: ${signal.rsi} — ${evaluation.action}`
+      `[Agent ${config.agentId}] ${symbol} — RSI: ${signal.rsi} — ${evaluation.action}`,
     );
 
     if (!evaluation.shouldTrade || evaluation.action === "HOLD") continue;
@@ -108,14 +111,14 @@ async function runAgentCycle(
       signal,
       evaluation.action,
       sizeUSDC,
-      strategy
+      strategy,
     );
 
     const { tradeId, reasonHash, txHash } = await logTradeOnChain(
       signal,
       evaluation.action,
       sizeUSDC,
-      reason
+      reason,
     );
 
     await query(
@@ -132,8 +135,19 @@ async function runAgentCycle(
         reason,
         reasonHash,
         txHash,
-      ]
+      ],
     );
+
+    await notifyTrade({
+      agentId: config.agentId,
+      asset: signal.asset,
+      direction: evaluation.action as "BUY" | "SELL",
+      sizeUSDC,
+      price: signal.price,
+      reason,
+      reasonHash,
+      txHash,
+    });
 
     console.log(`[Agent ${config.agentId}] ✅ Trade ${tradeId} logged on Kite`);
   }
