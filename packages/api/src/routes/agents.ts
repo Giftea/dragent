@@ -7,6 +7,7 @@ import {
 } from "../services/contractService";
 import { startAgent, stopAgent } from "../agents/agentRunner";
 import { ethers } from "ethers";
+import { getAAWalletAddress, getAAWalletBalance } from "../services/aaService";
 
 const router = Router();
 
@@ -185,7 +186,7 @@ router.get("/by-wallet/:wallet", async (req, res) => {
 // PATCH /api/agents/:id/strategy
 router.patch("/:id/strategy", async (req, res) => {
   try {
-    const agentId          = parseInt(req.params.id);
+    const agentId = parseInt(req.params.id);
     const { strategy, rules } = req.body;
 
     if (!strategy || !rules) {
@@ -196,14 +197,42 @@ router.patch("/:id/strategy", async (req, res) => {
       `UPDATE agents 
        SET strategy = $1, rules = $2, updated_at = NOW() 
        WHERE id = $3`,
-      [strategy, JSON.stringify(rules), agentId]
+      [strategy, JSON.stringify(rules), agentId],
     );
 
-    return res.json({ success: true, message: "Strategy updated. Agent will use new rules on next cycle." });
+    return res.json({
+      success: true,
+      message: "Strategy updated. Agent will use new rules on next cycle.",
+    });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to update strategy" });
   }
 });
 
+// GET /api/agents/:id/aa-wallet
+router.get("/:id/aa-wallet", async (req, res) => {
+  try {
+    const agentRes = await query("SELECT wallet FROM agents WHERE id = $1", [
+      parseInt(req.params.id),
+    ]);
+
+    if (agentRes.rows.length === 0) {
+      return res.status(404).json({ error: "Agent not found" });
+    }
+
+    const agentWallet = agentRes.rows[0].wallet;
+    const aaAddress = getAAWalletAddress(agentWallet);
+    const balance = await getAAWalletBalance(agentWallet);
+
+    return res.json({
+      signerWallet: agentWallet,
+      aaWallet: aaAddress,
+      balance,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to get AA wallet" });
+  }
+});
 export default router;

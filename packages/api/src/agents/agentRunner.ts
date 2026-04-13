@@ -9,6 +9,7 @@ import {
 import { ethers } from "ethers";
 import { query } from "../db";
 import { notifyTrade } from "../services/notificationService";
+import { logTradeViaAA } from "../services/aaService";
 
 interface AgentConfig {
   agentId: number;
@@ -114,12 +115,24 @@ async function runAgentCycle(
       strategy,
     );
 
-    const { tradeId, reasonHash, txHash } = await logTradeOnChain(
-      signal,
+    // Generate reason hash locally
+    const { ethers } = await import("ethers");
+    const reasonHash = ethers.keccak256(ethers.toUtf8Bytes(reason));
+
+    // Log trade via AA SDK
+    console.log(`[Agent ${config.agentId}] Logging via AA SDK...`);
+    const { txHash } = await logTradeViaAA(
+      config.agentWallet,
+      process.env.TRADE_JOURNAL_ADDRESS!,
+      signal.asset,
       evaluation.action,
-      sizeUSDC,
-      reason,
+      BigInt(Math.round(sizeUSDC * 1e6)),
+      BigInt(Math.round(signal.price * 1e8)),
+      reasonHash,
     );
+
+    // Use timestamp as local trade reference since tradeId comes from chain event
+    const localTradeRef = Date.now();
 
     await query(
       `INSERT INTO trades
@@ -127,7 +140,7 @@ async function runAgentCycle(
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
       [
         config.agentId,
-        Number(tradeId),
+        localTradeRef,
         signal.asset,
         evaluation.action,
         sizeUSDC,
@@ -149,6 +162,6 @@ async function runAgentCycle(
       txHash,
     });
 
-    console.log(`[Agent ${config.agentId}] ✅ Trade ${tradeId} logged on Kite`);
+    console.log(`[Agent ${config.agentId}] ✅ Trade logged on Kite: ${txHash}`);
   }
 }
