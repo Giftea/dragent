@@ -2,7 +2,12 @@
 
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { getAgent, getAgentTrades, startAgent, stopAgent } from "@/lib/api";
+import {
+  getAgent,
+  startAgent,
+  stopAgent,
+  getAgentTrades as getDbTrades,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +17,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { useAppKitAccount } from "@reown/appkit/react";
 import EditStrategyModal from "@/components/EditStrategyModal";
+import {
+  getAgentTrades as getGoldskyTrades,
+  getAgentReputation,
+  getAgentTradesByAddresses,
+  formatUSDC,
+  formatPrice,
+  formatWinRate,
+  formatDrawdown,
+  type OnChainTrade,
+} from "@/lib/goldsky";
 
 function StatCard({
   label,
@@ -28,6 +43,42 @@ function StatCard({
       <p className="text-2xl font-semibold text-white">{value}</p>
       {sub && <p className="text-xs text-zinc-600 mt-1">{sub}</p>}
     </div>
+  );
+}
+
+function ReasonText({
+  reasonHash,
+  agentId,
+  tradeId,
+}: {
+  reasonHash: string;
+  agentId: number;
+  tradeId: number;
+}) {
+  const { data: trades } = useQuery({
+    queryKey: ["db-trades", agentId],
+    queryFn: () => getDbTrades(agentId),
+  });
+
+  const match = (
+    trades as
+      | {
+          reason_hash: string;
+          reason: string;
+        }[]
+      | undefined
+  )?.find((t) => t.reason_hash === reasonHash);
+
+  if (!match?.reason) {
+    return (
+      <p className="text-sm text-zinc-500 font-mono text-xs">
+        {reasonHash.slice(0, 30)}...
+      </p>
+    );
+  }
+
+  return (
+    <p className="text-sm text-zinc-200 leading-relaxed">{match.reason}</p>
   );
 }
 
@@ -57,9 +108,31 @@ export default function DashboardPage() {
     refetchInterval: 30_000,
   });
 
-  const { data: trades = [], isLoading: tradesLoading } = useQuery({
-    queryKey: ["trades", agentId],
-    queryFn: () => getAgentTrades(agentId),
+  const { data: onChainTrades = [], isLoading: tradesLoading } = useQuery({
+    queryKey: ["goldsky-trades", agentId],
+    queryFn: async () => {
+      if (!agent?.wallet) return [];
+      // return getGoldskyTrades(agent.wallet, 20);
+       return getAgentTradesByAddresses([
+      agent.wallet,
+      "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"
+    ], 20);
+    },
+    enabled: !!agent?.wallet,
+    refetchInterval: 30_000,
+  });
+
+  const { data: onChainRep } = useQuery({
+    queryKey: ["goldsky-rep", agentId],
+    queryFn: async () => {
+      if (!agent?.wallet) return null;
+      console.log(onChainRep)
+      // return getAgentReputation(agent.wallet);
+         return getAgentReputation(
+      "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"
+    );
+    },
+    enabled: !!agent?.wallet,
     refetchInterval: 30_000,
   });
 
@@ -72,7 +145,7 @@ export default function DashboardPage() {
           title: "Agent paused",
           description:
             "Agent has been paused and will stop executing trades until reactivated.",
-          variant: "info"
+          variant: "info",
         });
       } else {
         await startAgent(agentId);
@@ -150,8 +223,8 @@ export default function DashboardPage() {
             {acting
               ? "..."
               : agent?.status === "active"
-                ? "Pause agent"
-                : "Start agent"}
+              ? "Pause agent"
+              : "Start agent"}
           </Button>
         </div>
       </nav>
@@ -230,18 +303,30 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label="Win rate"
-            value={winRate}
-            sub={`${stats?.winCount ?? 0} of ${stats?.totalTrades ?? 0} trades`}
+            value={onChainRep ? formatWinRate(onChainRep.winRateBps) : "—"}
+            sub={`${onChainRep?.winCount ?? 0} of ${
+              onChainRep?.totalTrades ?? 0
+            } trades`}
           />
-          <StatCard label="Max drawdown" value={drawdown} />
+          <StatCard
+            label="Max drawdown"
+            value={onChainRep ? formatDrawdown(onChainRep.maxDrawdownBps) : "—"}
+          />
           <StatCard
             label="Budget limit"
-            value={budget}
-            sub={`Tier ${stats?.tier ?? 0} — ${TIER_LABELS[stats?.tier ?? 0]}`}
+            value={
+              agent?.chainStats
+                ? "$" +
+                  (Number(agent.chainStats.budgetLimit) / 1e6).toLocaleString()
+                : "—"
+            }
+            sub={`Tier ${onChainRep?.tier ?? 0} — ${
+              TIER_LABELS[onChainRep?.tier ?? 0]
+            }`}
           />
           <StatCard
             label="Total trades"
-            value={String(stats?.totalTrades ?? 0)}
+            value={String(onChainRep?.totalTrades ?? 0)}
             sub="All time"
           />
         </div>
@@ -258,7 +343,7 @@ export default function DashboardPage() {
                 <Skeleton key={i} className="h-20 bg-zinc-900" />
               ))}
             </div>
-          ) : trades.length === 0 ? (
+          ) : onChainTrades.length === 0 ? (
             <Card className="bg-zinc-900 border-zinc-800">
               <CardContent className="flex flex-col items-center gap-3 py-16">
                 <p className="text-zinc-400 text-sm">No trades yet.</p>
@@ -270,74 +355,60 @@ export default function DashboardPage() {
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
-              {trades.map(
-                (trade: {
-                  id: number;
-                  trade_id: number;
-                  asset: string;
-                  direction: string;
-                  size_usdc: number;
-                  price_usd: number;
-                  reason: string;
-                  reason_hash: string;
-                  tx_hash: string;
-                  created_at: string;
-                }) => (
-                  <Card key={trade.id} className="bg-zinc-900 border-zinc-800">
-                    <CardContent className="py-4 px-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <Badge
-                            className={
-                              trade.direction === "BUY"
-                                ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                : "bg-red-500/10 text-red-400 border-red-500/20"
-                            }
-                          >
-                            {trade.direction}
-                          </Badge>
-                          <span className="text-white font-medium">
-                            {trade.asset}
-                          </span>
-                          <span className="text-zinc-400 text-sm">
-                            ${trade.size_usdc} USDC
-                          </span>
-                          <span className="text-zinc-600 text-sm">
-                            @ ${Number(trade.price_usd).toLocaleString()}
-                          </span>
-                        </div>
-                        <span className="text-xs text-zinc-600">
-                          {new Date(trade.created_at).toLocaleTimeString()}
-                        </span>
-                      </div>
-
-                      {/* Reason — the key differentiator */}
-                      <div className="bg-zinc-800 rounded-md px-4 py-3 mb-3">
-                        <p className="text-xs text-zinc-500 mb-1">
-                          Agent reasoning
-                        </p>
-                        <p className="text-sm text-zinc-200 leading-relaxed">
-                          {trade.reason}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <a
-                          href={`https://testnet.kitescan.ai/tx/${trade.tx_hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-400 hover:underline"
+              {onChainTrades.map((trade: OnChainTrade) => (
+                <Card key={trade.id} className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="py-4 px-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          className={
+                            trade.direction === "BUY"
+                              ? "bg-green-500/10 text-green-400 border-green-500/20"
+                              : "bg-red-500/10 text-red-400 border-red-500/20"
+                          }
                         >
-                          View on Kite ↗
-                        </a>
-                        <span className="text-xs text-zinc-600 font-mono">
-                          Hash: {trade.reason_hash?.slice(0, 18)}...
+                          {trade.direction}
+                        </Badge>
+                        <span className="text-white font-medium">
+                          {trade.asset}
+                        </span>
+                        <span className="text-zinc-400 text-sm">
+                          ${formatUSDC(trade.sizeUSDC)} USDC
+                        </span>
+                        <span className="text-zinc-600 text-sm">
+                          @ ${formatPrice(trade.priceUSD).toLocaleString()}
                         </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                ),
-              )}
+                      <span className="text-xs text-zinc-600">
+                        {new Date(
+                          Number(trade.timestamp) * 1000,
+                        ).toLocaleTimeString()}
+                      </span>
+                    </div>
+
+                    {/* Reason from Supabase — Goldsky has the hash, DB has the text */}
+                    <div className="bg-zinc-800 rounded-md px-4 py-3 mb-3">
+                      <p className="text-xs text-zinc-500 mb-1">
+                        Agent reasoning
+                      </p>
+                      <ReasonText
+                        reasonHash={trade.reasonHash}
+                        agentId={agentId}
+                        tradeId={Number(trade.tradeId)}
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs text-zinc-600 font-mono">
+                        Hash: {trade.reasonHash.slice(0, 20)}...
+                      </span>
+                      <span className="text-xs text-green-500">
+                        ✓ Verified on Kite
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           )}
         </div>

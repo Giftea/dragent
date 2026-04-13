@@ -35,6 +35,11 @@
 /packages/web/.env
 /packages/web/.env.local
 
+# Subgraph
+packages/subgraph/build/
+packages/subgraph/generated/
+packages/subgraph/node_modules/
+
 *.log
 .DS_Store
 .vscode

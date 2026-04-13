@@ -1,0 +1,41 @@
+type Trade @entity {
+  id:          ID!
+  tradeId:     BigInt!
+  agentId:     Bytes!
+  timestamp:   BigInt!
+  asset:       String!
+  direction:   String!
+  sizeUSDC:    BigInt!
+  priceUSD:    BigInt!
+  reasonHash:  Bytes!
+  agent:       Agent!
+}
+
+type Agent @entity {
+  id:          ID!   # agent wallet address
+  address:     Bytes!
+  trades:      [Trade!]! @derivedFrom(field: "agent")
+  reputation:  AgentReputation
+  vault:       Vault
+  totalTrades: BigInt!
+  createdAt:   BigInt!
+}
+
+type AgentReputation @entity {
+  id:            ID!   # agent wallet address
+  agent:         Agent!
+  totalTrades:   BigInt!
+  winCount:      BigInt!
+  winRateBps:    BigInt!
+  maxDrawdownBps: BigInt!
+  tier:          Int!
+  lastUpdated:   BigInt!
+}
+
+type Vault @entity {
+  id:           ID!   # vault address
+  user:         Bytes!
+  agent:        Agent!
+  vaultAddress: Bytes!
+  createdAt:    BigInt!
+}
