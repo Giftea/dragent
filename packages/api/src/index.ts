@@ -19,6 +19,7 @@ app.use(express.json());
 app.use("/api/agents", agentRoutes);
 app.use("/api/strategy", strategyRoutes);
 app.use("/api/telegram", telegramRoutes);
+// app.use("/api/reputation", require("./routes/reputation").default);
 
 // ── Health check ──
 app.get("/health", (_, res) => {

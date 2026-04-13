@@ -4,10 +4,12 @@ import {
   deployUserVault,
   getAgentStats,
   getRecentTrades,
+  reputationRegistry,
 } from "../services/contractService";
 import { startAgent, stopAgent } from "../agents/agentRunner";
 import { ethers } from "ethers";
 import { getAAWalletAddress, getAAWalletBalance } from "../services/aaService";
+import { requirePayment } from "../middleware/x402";
 
 const router = Router();
 
@@ -235,4 +237,34 @@ router.get("/:id/aa-wallet", async (req, res) => {
     return res.status(500).json({ error: "Failed to get AA wallet" });
   }
 });
+
+// GET /api/reputation/:address — 0.01 PYUSD
+router.get(
+  "/reputation/:address",
+  requirePayment("10000", "Reputation lookup — 0.01 PYUSD"),
+  async (req, res) => {
+    try {
+      const { address } = req.params;
+      const stats = await reputationRegistry.getStats(address);
+      const tier = await reputationRegistry.getTier(address);
+
+      return res.json({
+        address,
+        totalTrades: Number(stats.totalTrades),
+        winCount: Number(stats.winCount),
+        winRateBps: Number(stats.winRateBps),
+        maxDrawdownBps: Number(stats.maxDrawdownBps),
+        tier: Number(tier),
+        budgetLimit: (
+          await reputationRegistry.getBudgetLimit(address)
+        ).toString(),
+        source: "Kite chain — ReputationRegistry.sol",
+      });
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Failed to fetch reputation" });
+    }
+  },
+);
+
 export default router;

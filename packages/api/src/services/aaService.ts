@@ -149,21 +149,46 @@ export async function logTradeViaAA(
   priceUSD: bigint,
   reasonHash: string,
 ): Promise<{ txHash: string }> {
-  const journalInterface = new ethers.Interface([
-    "function logTrade(string asset, string direction, uint256 sizeUSDC, uint256 priceUSD, bytes32 reasonHash) returns (uint256)",
-  ]);
+  try {
+    const journalInterface = new ethers.Interface([
+      "function logTrade(string asset, string direction, uint256 sizeUSDC, uint256 priceUSD, bytes32 reasonHash) returns (uint256)",
+    ]);
 
-  const callData = journalInterface.encodeFunctionData("logTrade", [
-    asset,
-    direction,
-    sizeUSDC,
-    priceUSD,
-    reasonHash,
-  ]);
+    const callData = journalInterface.encodeFunctionData("logTrade", [
+      asset,
+      direction,
+      sizeUSDC,
+      priceUSD,
+      reasonHash,
+    ]);
 
-  const result = await sendUserOp(signerAddress, tradeJournalAddr, callData);
+    const result = await sendUserOp(signerAddress, tradeJournalAddr, callData);
 
-  return { txHash: result.txHash };
+    return { txHash: result.txHash };
+  } catch (err) {
+    // AA SDK timed out or failed — fall back to direct transaction
+    console.warn("⚠️  AA SDK failed, falling back to direct tx:", err);
+
+    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+    const journal = new ethers.Contract(
+      tradeJournalAddr,
+      [
+        "function logTrade(string,string,uint256,uint256,bytes32) returns (uint256)",
+      ],
+      wallet,
+    );
+
+    const tx = await journal.logTrade(
+      asset,
+      direction,
+      sizeUSDC,
+      priceUSD,
+      reasonHash,
+    );
+    const receipt = await tx.wait();
+    console.log(`✅ Fallback tx confirmed: ${receipt.hash}`);
+    return { txHash: receipt.hash };
+  }
 }
 
 // ── Get AA wallet balance ──────────────────
