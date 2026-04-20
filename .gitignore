@@ -12,6 +12,7 @@
 /artifacts
 /packages/contracts/artifacts
 /packages/contracts/cache
+/packages/contracts/node_modules
 
 # Hardhat compilation (v2) support directory
 /cache

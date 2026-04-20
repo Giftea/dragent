@@ -8,6 +8,7 @@ import { startAgent } from "./agents/agentRunner";
 import agentRoutes from "./routes/agents";
 import strategyRoutes from "./routes/strategy";
 import telegramRoutes from "./routes/telegram";
+import gaslessRoutes from "./routes/gasless";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use("/api/agents", agentRoutes);
 app.use("/api/strategy", strategyRoutes);
 app.use("/api/telegram", telegramRoutes);
+app.use("/api/gasless", gaslessRoutes);
 // app.use("/api/reputation", require("./routes/reputation").default);
 
 // ── Health check ──
