@@ -1,17 +1,19 @@
-import Link           from "next/link";
-import { Button }     from "@/components/ui/button";
-import { Badge }      from "@/components/ui/badge";
-import { Separator }  from "@/components/ui/separator";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-black text-white">
-
       {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
         <div className="flex items-center gap-2">
           <span className="text-xl font-semibold tracking-tight">Dragent</span>
-          <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400">
+          <Badge
+            variant="outline"
+            className="text-xs border-zinc-700 text-zinc-400"
+          >
             Testnet
           </Badge>
         </div>
@@ -27,6 +29,11 @@ export default function LandingPage() {
             </Button>
           </Link>
         </div>
+        <Link href="/api-docs">
+          <Button variant="ghost" className="text-zinc-400 hover:text-white">
+            API
+          </Button>
+        </Link>
       </nav>
 
       {/* Hero */}
@@ -36,21 +43,30 @@ export default function LandingPage() {
         </Badge>
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight max-w-4xl leading-none">
           Your AI trading agent.{" "}
-          <span className="text-zinc-400">Every decision, verified on-chain.</span>
+          <span className="text-zinc-400">
+            Every decision, verified on-chain.
+          </span>
         </h1>
         <p className="mt-8 text-lg text-zinc-400 max-w-xl leading-relaxed">
           Write your strategy in plain English. Dragent executes autonomously,
-          explains every trade, and builds a verifiable reputation over time.
-          No black boxes. No blind trust.
+          explains every trade, and builds a verifiable reputation over time. No
+          black boxes. No blind trust.
         </p>
         <div className="flex items-center gap-4 mt-10">
           <Link href="/launch">
-            <Button size="lg" className="bg-white text-black hover:bg-zinc-200 px-8">
+            <Button
+              size="lg"
+              className="bg-white text-black hover:bg-zinc-200 px-8"
+            >
               Deploy your agent
             </Button>
           </Link>
           <Link href="/passport/1">
-            <Button size="lg" variant="outline" className="border-zinc-700 text-zinc-300 px-8">
+            <Button
+              size="lg"
+              variant="outline"
+              className="border-zinc-700 text-zinc-300 px-8"
+            >
               View demo passport
             </Button>
           </Link>
@@ -61,7 +77,9 @@ export default function LandingPage() {
 
       {/* How it works */}
       <section className="px-8 py-24 max-w-5xl mx-auto">
-        <h2 className="text-2xl font-semibold mb-12 text-center">How it works</h2>
+        <h2 className="text-2xl font-semibold mb-12 text-center">
+          How it works
+        </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
             {
@@ -81,9 +99,13 @@ export default function LandingPage() {
             },
           ].map((item) => (
             <div key={item.step} className="flex flex-col gap-3">
-              <span className="text-4xl font-bold text-zinc-800">{item.step}</span>
+              <span className="text-4xl font-bold text-zinc-800">
+                {item.step}
+              </span>
               <h3 className="text-lg font-medium">{item.title}</h3>
-              <p className="text-zinc-400 text-sm leading-relaxed">{item.body}</p>
+              <p className="text-zinc-400 text-sm leading-relaxed">
+                {item.body}
+              </p>
             </div>
           ))}
         </div>
@@ -95,9 +117,9 @@ export default function LandingPage() {
       <section className="px-8 py-20 max-w-5xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: "100%",    label: "Trades explained" },
+            { value: "100%", label: "Trades explained" },
             { value: "On-chain", label: "Reputation system" },
-            { value: "0",       label: "Black boxes" },
+            { value: "0", label: "Black boxes" },
             { value: "Kite L1", label: "Settlement layer" },
           ].map((stat) => (
             <div key={stat.label}>
@@ -110,7 +132,9 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-zinc-800 px-8 py-8 flex items-center justify-between">
-        <span className="text-zinc-600 text-sm">Dragent — built on Kite chain</span>
+        <span className="text-zinc-600 text-sm">
+          Dragent — built on Kite chain
+        </span>
         <div className="flex gap-6 text-sm text-zinc-600">
           <a
             href="https://testnet.kitescan.ai"
@@ -130,7 +154,6 @@ export default function LandingPage() {
           </a>
         </div>
       </footer>
-
     </main>
   );
 }
