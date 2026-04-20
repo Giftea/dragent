@@ -39,3 +39,12 @@ type Vault @entity {
   vaultAddress: Bytes!
   createdAt:    BigInt!
 }
+
+type GaslessTransfer @entity {
+  id:        ID!
+  from:      Bytes!
+  to:        Bytes!
+  amount:    BigInt!
+  timestamp: BigInt!
+  txHash:    Bytes!
+}

@@ -67,3 +67,26 @@ dataSources:
         - event: VaultCreated(indexed address,indexed address,address,uint256)
           handler: handleVaultCreated
       file: ./src/agentVaultFactory.ts
+
+  - kind: ethereum
+    name: DUSD
+    network: kite-ai-testnet
+    source:
+      address: "0x71390906e2FB696520F4eA4b14F5E818d11b36Dc"
+      abi: DUSD
+      startBlock: 20600000
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.7
+      language: wasm/assemblyscript
+      entities:
+        - GaslessTransfer
+      abis:
+        - name: DUSD
+          file: ./abis/DUSD.json
+      eventHandlers:
+        - event: Transfer(indexed address,indexed address,uint256)
+          handler: handleDUSDTransfer
+        - event: AuthorizationUsed(indexed address,indexed bytes32)
+          handler: handleAuthorizationUsed
+      file: ./src/dusd.ts
