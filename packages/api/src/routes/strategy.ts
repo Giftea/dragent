@@ -129,7 +129,11 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 // POST /api/strategy/parse — 0.10 PYUSD
 router.post(
   "/parse",
-  requirePayment("100000", "Strategy parsing — 0.10 PYUSD"),
+  requirePayment(
+    "1000000000000000000",
+    "Strategy parsing — powered by Claude AI",
+    "/api/strategy/parse",
+  ),
   async (req, res) => {
     try {
       const { strategy } = req.body;
@@ -202,7 +206,11 @@ Return ONLY valid JSON, no explanation, no markdown:
 // POST /api/reason/generate — 0.05 PYUSD
 router.post(
   "/reason/generate",
-  requirePayment("50000", "Trade reason generation — 0.05 PYUSD"),
+  requirePayment(
+    "500000000000000000",
+    "Trade reason generation — powered by Claude AI",
+    "/api/reason/generate",
+  ),
   async (req, res) => {
     try {
       const {

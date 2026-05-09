@@ -1,6 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
+const API_BASE_URL = process.env.API_BASE_URL || "http://localhost:3001";
+
 export default function ApiDocsPage() {
   return (
     <main className="min-h-screen bg-black text-white">
@@ -45,7 +47,7 @@ export default function ApiDocsPage() {
             <code className="bg-zinc-800 px-1 rounded text-xs">X-Payment</code>{" "}
             header to access the service.
           </p>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-xs font-mono text-zinc-400">
+          {/* <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-xs font-mono text-zinc-400">
             <p className="text-zinc-500 mb-2">
               # Step 1 — hit endpoint, receive 402
             </p>
@@ -62,6 +64,20 @@ export default function ApiDocsPage() {
               # Step 4 — retry with X-Payment header
             </p>
             <p>POST /api/strategy/parse -H "X-Payment: &lt;auth&gt;"</p>
+          </div> */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 text-xs font-mono text-zinc-400">
+            <p className="text-zinc-500 mb-2">
+              # Install Kite Passport in Claude Code or Codex
+            </p>
+            <p>curl -fsSL https://agentpassport.ai/install.sh | bash</p>
+            <p className="mt-2 text-zinc-500"># Then tell your agent:</p>
+            <p>
+              "Pay for and call the Dragent strategy parser at {API_BASE_URL}
+              /api/strategy/parse"
+            </p>
+            <p className="mt-2 text-zinc-500">
+              # Your agent handles the rest automatically
+            </p>
           </div>
         </div>
 

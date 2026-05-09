@@ -32,37 +32,41 @@ export const PAYMENT_CONFIG: Record<
 };
 
 // ── x402 payment middleware ───────────────────────────────
-export function requirePayment(amount: string, description: string) {
+export function requirePayment(
+  amount:      string,
+  description: string,
+  endpoint:    string
+) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const xPayment = req.headers["x-payment"] as string | undefined;
 
     if (!xPayment) {
       return res.status(402).json({
-        error: "Payment required",
-        payee_addr: PAYEE_ADDRESS,
-        amount,
-        token_type: "PYUSD",
-        description,
-        facilitator: FACILITATOR_URL,
-        instructions: {
-          step1:
-            "Call get_payer_addr via Kite MCP to get your AA wallet address",
-          step2: "Call approve_payment via Kite MCP with the above parameters",
-          step3:
-            "Retry this request with the X-Payment header set to the returned authorization",
-        },
+        error:   "X-PAYMENT header is required",
+        accepts: [{
+          scheme:            "gokite-aa",
+          network:           "kite-testnet",
+          maxAmountRequired: amount,
+          resource:          `${process.env.API_BASE_URL || "http://localhost:3001"}${endpoint}`,
+          description,
+          mimeType:          "application/json",
+          payTo:             PAYEE_ADDRESS,
+          maxTimeoutSeconds: 300,
+          asset:             "0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63",
+          extra:             null,
+          merchantName:      "Dragent",
+        }],
+        x402Version: 1,
       });
     }
 
-    // On testnet — skip verification, just check header exists
+    // On testnet — skip verification
     if (process.env.NODE_ENV !== "production") {
-      console.log(
-        "⚠️  Testnet: X-Payment header present, skipping verification",
-      );
+      console.log("⚠️  Testnet: X-Payment header present, skipping verification");
       return next();
     }
 
-    // On production — verify with facilitator
+    // On production — verify with Pieverse facilitator
     try {
       const verified = await verifyPayment(xPayment, amount, PAYEE_ADDRESS);
       if (!verified) {
@@ -78,24 +82,23 @@ export function requirePayment(amount: string, description: string) {
 
 // ── Verify payment via facilitator ───────────────────────
 async function verifyPayment(
-  xPayment: string,
+  xPayment:      string,
   expectedAmount: string,
-  payeeAddress: string,
+  payeeAddress:  string
 ): Promise<boolean> {
   try {
-    const axios = await import("axios");
+    const axios   = await import("axios");
     const payload = JSON.parse(
-      Buffer.from(xPayment, "base64").toString("utf8"),
+      Buffer.from(xPayment, "base64").toString("utf8")
     );
 
     const res = await axios.default.post(
-      `${FACILITATOR_URL}/verify`,
+      "https://facilitator.pieverse.io/v2/verify",
       {
-        payment: payload,
-        expectedAmount,
-        payeeAddress,
+        authorization: payload,
+        network:       "kite-testnet",
       },
-      { timeout: 5000 },
+      { timeout: 5000 }
     );
 
     return res.data?.valid === true;
