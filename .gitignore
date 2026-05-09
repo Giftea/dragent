@@ -44,3 +44,4 @@ packages/subgraph/node_modules/
 *.log
 .DS_Store
 .vscode
+.kite-passport/
