@@ -1,32 +1,42 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAppKitAccount } from "@reown/appkit/react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  getAgentByWallet,
   getAgent,
+  getAgentTrades as getDbTrades,
   startAgent,
   stopAgent,
-  getAgentTrades as getDbTrades,
 } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { useAppKitAccount } from "@reown/appkit/react";
-import EditStrategyModal from "@/components/EditStrategyModal";
 import {
-  getAgentTrades as getGoldskyTrades,
-  getAgentReputation,
   getAgentTradesByAddresses,
+  getAgentReputation,
   formatUSDC,
   formatPrice,
   formatWinRate,
   formatDrawdown,
   type OnChainTrade,
 } from "@/lib/goldsky";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import EditStrategyModal from "@/components/EditStrategyModal";
+
+const TIER_LABELS = ["Sandbox", "Apprentice", "Trader", "Expert"];
+const TIER_COLORS = [
+  "text-zinc-400",
+  "text-blue-400",
+  "text-purple-400",
+  "text-yellow-400",
+];
+
+const DEPLOYER = "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7";
 
 function StatCard({
   label,
@@ -49,11 +59,9 @@ function StatCard({
 function ReasonText({
   reasonHash,
   agentId,
-  tradeId,
 }: {
   reasonHash: string;
   agentId: number;
-  tradeId: number;
 }) {
   const { data: trades } = useQuery({
     queryKey: ["db-trades", agentId],
@@ -71,7 +79,7 @@ function ReasonText({
 
   if (!match?.reason) {
     return (
-      <p className="text-sm text-zinc-500 font-mono text-xs">
+      <p className="text-xs text-zinc-500 font-mono">
         {reasonHash.slice(0, 30)}...
       </p>
     );
@@ -82,21 +90,23 @@ function ReasonText({
   );
 }
 
-const TIER_LABELS = ["Sandbox", "Apprentice", "Trader", "Expert"];
-const TIER_COLORS = [
-  "text-zinc-400",
-  "text-blue-400",
-  "text-purple-400",
-  "text-yellow-400",
-];
-
 export default function DashboardPage() {
-  const { id } = useParams();
-  const agentId = Number(id);
-  const [acting, setActing] = useState(false);
-  const { address } = useAppKitAccount();
-  const [editingStrategy, setEditingStrategy] = useState(false);
+  const { address, isConnected } = useAppKitAccount();
+  const router = useRouter();
   const { toast } = useToast();
+
+  const [agentId, setAgentId] = useState<number | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [acting, setActing] = useState(false);
+  const [editingStrategy, setEditingStrategy] = useState(false);
+
+  // Find agent by wallet
+  useEffect(() => {
+    if (!isConnected || !address) return;
+    getAgentByWallet(address)
+      .then((data) => setAgentId(data.agentId))
+      .catch(() => setNotFound(true));
+  }, [isConnected, address]);
 
   const {
     data: agent,
@@ -104,19 +114,16 @@ export default function DashboardPage() {
     refetch,
   } = useQuery({
     queryKey: ["agent", agentId],
-    queryFn: () => getAgent(agentId),
+    queryFn: () => getAgent(agentId!),
+    enabled: !!agentId,
     refetchInterval: 30_000,
   });
 
-  const { data: onChainTrades = [], isLoading: tradesLoading } = useQuery({
+  const { data: onChainTrades = [] } = useQuery({
     queryKey: ["goldsky-trades", agentId],
     queryFn: async () => {
       if (!agent?.wallet) return [];
-      // return getGoldskyTrades(agent.wallet, 20);
-       return getAgentTradesByAddresses([
-      agent.wallet,
-      "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"
-    ], 20);
+      return getAgentTradesByAddresses([agent.wallet, DEPLOYER], 20);
     },
     enabled: !!agent?.wallet,
     refetchInterval: 30_000,
@@ -124,52 +131,67 @@ export default function DashboardPage() {
 
   const { data: onChainRep } = useQuery({
     queryKey: ["goldsky-rep", agentId],
-    queryFn: async () => {
-      if (!agent?.wallet) return null;
-      console.log(onChainRep)
-      // return getAgentReputation(agent.wallet);
-         return getAgentReputation(
-      "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"
-    );
-    },
-    enabled: !!agent?.wallet,
+    queryFn: () => getAgentReputation(DEPLOYER),
+    enabled: !!agentId,
     refetchInterval: 30_000,
   });
 
   const handleToggle = async () => {
+    if (!agentId) return;
     setActing(true);
     try {
       if (agent?.status === "active") {
         await stopAgent(agentId);
-        toast({
-          title: "Agent paused",
-          description:
-            "Agent has been paused and will stop executing trades until reactivated.",
-          variant: "info",
-        });
+        toast({ title: "Agent paused" });
       } else {
         await startAgent(agentId);
-        toast({
-          title: "Agent activated",
-          description:
-            "Agent is now running and will execute trades when conditions are met.",
-          variant: "success",
-        });
+        toast({ title: "Agent activated" });
       }
       refetch();
     } catch {
-      toast({
-        title: "Action failed",
-        description:
-          "An error occurred while trying to perform the action. Please try again.",
-        variant: "destructive",
-      });
+      toast({ title: "Action failed", variant: "destructive" });
     } finally {
       setActing(false);
     }
   };
 
-  if (isLoading) {
+  // Not connected
+  if (!isConnected) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <p className="text-white text-lg font-medium">Connect your wallet</p>
+          <p className="text-zinc-400 text-sm max-w-sm">
+            Connect your wallet to access your Dragent dashboard.
+          </p>
+          <appkit-button />
+        </div>
+      </main>
+    );
+  }
+
+  // No agent found
+  if (notFound) {
+    return (
+      <main className="min-h-screen bg-black text-white flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <p className="text-white text-lg font-medium">No agent found</p>
+          <p className="text-zinc-400 text-sm max-w-sm">
+            You haven't deployed a Dragent agent yet.
+          </p>
+          <Button
+            className="bg-white text-black hover:bg-zinc-200"
+            onClick={() => router.push("/launch")}
+          >
+            Deploy your agent →
+          </Button>
+        </div>
+      </main>
+    );
+  }
+
+  // Loading
+  if (isLoading || !agent) {
     return (
       <main className="min-h-screen bg-black text-white">
         <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
@@ -186,18 +208,15 @@ export default function DashboardPage() {
     );
   }
 
-  const stats = agent?.chainStats;
-  const winRate = stats ? (stats.winRateBps / 100).toFixed(1) + "%" : "—";
-  const drawdown = stats
-    ? (Math.abs(stats.maxDrawdownBps) / 100).toFixed(1) + "%"
-    : "—";
-  const budget = stats
-    ? "$" + (Number(stats.budgetLimit) / 1e6).toLocaleString()
-    : "—";
+  const tier = onChainRep?.tier ?? 0;
+  const winRate = onChainRep ? formatWinRate(onChainRep.winRateBps) : "—";
+  const drawdown = onChainRep ? formatDrawdown(onChainRep.maxDrawdownBps) : "—";
+  const budget =
+    "$" +
+    (Number(agent.chainStats?.budgetLimit ?? 50000000) / 1e6).toLocaleString();
 
   return (
     <main className="min-h-screen bg-black text-white">
-      {/* Nav */}
       <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
         <a href="/" className="text-lg font-semibold tracking-tight">
           Dragent
@@ -211,9 +230,9 @@ export default function DashboardPage() {
           </a>
           <Button
             size="sm"
-            variant={agent?.status === "active" ? "outline" : "default"}
+            variant={agent.status === "active" ? "outline" : "default"}
             className={
-              agent?.status === "active"
+              agent.status === "active"
                 ? "border-zinc-700 text-zinc-300"
                 : "bg-white text-black hover:bg-zinc-200"
             }
@@ -222,7 +241,7 @@ export default function DashboardPage() {
           >
             {acting
               ? "..."
-              : agent?.status === "active"
+              : agent.status === "active"
               ? "Pause agent"
               : "Start agent"}
           </Button>
@@ -237,28 +256,22 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-semibold">Agent #{agentId}</h1>
               <Badge
                 className={
-                  agent?.status === "active"
+                  agent.status === "active"
                     ? "bg-green-500/10 text-green-400 border-green-500/20"
                     : "bg-zinc-800 text-zinc-400 border-zinc-700"
                 }
               >
-                {agent?.status ?? "—"}
+                {agent.status}
               </Badge>
-              {stats && (
-                <Badge
-                  variant="outline"
-                  className={`border-zinc-700 ${TIER_COLORS[stats.tier]}`}
-                >
-                  {TIER_LABELS[stats.tier]}
-                </Badge>
-              )}
+              <Badge
+                variant="outline"
+                className={`border-zinc-700 ${TIER_COLORS[tier]}`}
+              >
+                {TIER_LABELS[tier]}
+              </Badge>
             </div>
-            <div
-              style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}
-            >
-              <p className="text-sm text-zinc-500 max-w-xl">
-                {agent?.strategy}
-              </p>
+            <div className="flex items-start gap-2">
+              <p className="text-sm text-zinc-500 max-w-xl">{agent.strategy}</p>
               <button
                 onClick={() => setEditingStrategy(true)}
                 style={{
@@ -289,40 +302,30 @@ export default function DashboardPage() {
             </a>
           </div>
           <a
-            href={`https://testnet.kitescan.ai/address/${agent?.vault_address}`}
+            href={`https://testnet.kitescan.ai/address/${agent.vault_address}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs text-blue-400 hover:underline font-mono"
           >
-            {agent?.vault_address?.slice(0, 10)}...
-            {agent?.vault_address?.slice(-8)} ↗
+            {agent.vault_address?.slice(0, 10)}...
+            {agent.vault_address?.slice(-8)} ↗
           </a>
         </div>
 
-        {/* Stats grid */}
+        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label="Win rate"
-            value={onChainRep ? formatWinRate(onChainRep.winRateBps) : "—"}
+            value={winRate}
             sub={`${onChainRep?.winCount ?? 0} of ${
               onChainRep?.totalTrades ?? 0
             } trades`}
           />
-          <StatCard
-            label="Max drawdown"
-            value={onChainRep ? formatDrawdown(onChainRep.maxDrawdownBps) : "—"}
-          />
+          <StatCard label="Max drawdown" value={drawdown} />
           <StatCard
             label="Budget limit"
-            value={
-              agent?.chainStats
-                ? "$" +
-                  (Number(agent.chainStats.budgetLimit) / 1e6).toLocaleString()
-                : "—"
-            }
-            sub={`Tier ${onChainRep?.tier ?? 0} — ${
-              TIER_LABELS[onChainRep?.tier ?? 0]
-            }`}
+            value={budget}
+            sub={`Tier ${tier} — ${TIER_LABELS[tier]}`}
           />
           <StatCard
             label="Total trades"
@@ -336,14 +339,7 @@ export default function DashboardPage() {
         {/* Trade feed */}
         <div>
           <h2 className="text-lg font-medium mb-4">Trade feed</h2>
-
-          {tradesLoading ? (
-            <div className="flex flex-col gap-3">
-              {[...Array(3)].map((_, i) => (
-                <Skeleton key={i} className="h-20 bg-zinc-900" />
-              ))}
-            </div>
-          ) : onChainTrades.length === 0 ? (
+          {onChainTrades.length === 0 ? (
             <Card className="bg-zinc-900 border-zinc-800">
               <CardContent className="flex flex-col items-center gap-3 py-16">
                 <p className="text-zinc-400 text-sm">No trades yet.</p>
@@ -385,26 +381,28 @@ export default function DashboardPage() {
                         ).toLocaleTimeString()}
                       </span>
                     </div>
-
-                    {/* Reason from Supabase — Goldsky has the hash, DB has the text */}
                     <div className="bg-zinc-800 rounded-md px-4 py-3 mb-3">
                       <p className="text-xs text-zinc-500 mb-1">
                         Agent reasoning
                       </p>
                       <ReasonText
                         reasonHash={trade.reasonHash}
-                        agentId={agentId}
-                        tradeId={Number(trade.tradeId)}
+                        agentId={agentId!}
                       />
                     </div>
-
                     <div className="flex items-center gap-4">
+                      <a
+                        href={`https://testnet.kitescan.ai/tx/${trade.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-400 hover:underline"
+                      >
+                        View on Kite ↗
+                      </a>
                       <span className="text-xs text-zinc-600 font-mono">
-                        Hash: {trade.reasonHash.slice(0, 20)}...
+                        Hash: {trade.reasonHash?.slice(0, 18)}...
                       </span>
-                      <span className="text-xs text-green-500">
-                        ✓ Verified on Kite
-                      </span>
+                      <span className="text-xs text-green-500">✓ Verified</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -413,9 +411,10 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
       {editingStrategy && agent && (
         <EditStrategyModal
-          agentId={agentId}
+          agentId={agentId!}
           currentStrategy={agent.strategy}
           onUpdated={refetch}
           onClose={() => setEditingStrategy(false)}
