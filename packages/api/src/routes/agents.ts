@@ -241,7 +241,11 @@ router.get("/:id/aa-wallet", async (req, res) => {
 // GET /api/reputation/:address — 0.01 PYUSD
 router.get(
   "/reputation/:address",
-  requirePayment("10000", "Reputation lookup — 0.01 PYUSD"),
+  requirePayment(
+    "10000000000000000",
+    "Reputation lookup — Kite chain data",
+    "/api/agents/reputation/:address",
+  ),
   async (req, res) => {
     try {
       const { address } = req.params;
