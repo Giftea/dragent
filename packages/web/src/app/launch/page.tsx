@@ -131,14 +131,14 @@ export default function LaunchPage() {
                     step === s
                       ? "bg-white text-black"
                       : [
-                            "connect",
-                            "strategy",
-                            "preview",
-                            "deploying",
-                            "done",
-                          ].indexOf(step) > i
-                        ? "bg-zinc-700 text-zinc-300"
-                        : "bg-zinc-900 text-zinc-600 border border-zinc-800"
+                          "connect",
+                          "strategy",
+                          "preview",
+                          "deploying",
+                          "done",
+                        ].indexOf(step) > i
+                      ? "bg-zinc-700 text-zinc-300"
+                      : "bg-zinc-900 text-zinc-600 border border-zinc-800"
                   }`}
               >
                 {i + 1}
@@ -167,8 +167,9 @@ export default function LaunchPage() {
             <CardHeader>
               <CardTitle className="text-white">Write your strategy</CardTitle>
               <CardDescription className="text-zinc-400">
-                Describe your trading rules in plain English. Claude will parse
-                your intent into executable logic.
+                Describe your market monitoring rules in plain English. Claude
+                will parse your intent into executable logic your agent runs
+                autonomously.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
@@ -275,19 +276,19 @@ export default function LaunchPage() {
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                   <span className="text-sm text-zinc-300">
-                    AgentVault contract on Kite testnet
+                    AgentVault on Kite — your capital vault with spending rules
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                   <span className="text-sm text-zinc-300">
-                    Agent wallet with your spending rules
+                    Agent wallet with programmable decision limits
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
                   <span className="text-sm text-zinc-300">
-                    Reputation passport on ReputationRegistry
+                    Reputation passport on ReputationRegistry — builds over time
                   </span>
                 </div>
               </div>
@@ -354,8 +355,9 @@ export default function LaunchPage() {
                   Your agent is live
                 </p>
                 <p className="text-zinc-400 text-sm max-w-sm">
-                  Dragent is now scanning markets and will execute trades
-                  autonomously based on your strategy.
+                  Dragent is now monitoring markets and will log verifiable
+                  decisions autonomously based on your strategy. Every decision
+                  is proven on Kite chain.
                 </p>
               </div>
 

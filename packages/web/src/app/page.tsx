@@ -48,9 +48,10 @@ export default function LandingPage() {
           </span>
         </h1>
         <p className="mt-8 text-lg text-zinc-400 max-w-xl leading-relaxed">
-          Write your strategy in plain English. Dragent executes autonomously,
-          explains every trade, and builds a verifiable reputation over time. No
-          black boxes. No blind trust.
+          Write your strategy in plain English. Dragent monitors markets
+          autonomously, explains every decision, and builds a verifiable
+          reputation on Kite chain. No black boxes. No blind trust. Every
+          decision, explained and proven on-chain.
         </p>
         <div className="flex items-center gap-4 mt-10">
           <Link href="/launch">
@@ -89,13 +90,13 @@ export default function LandingPage() {
             },
             {
               step: "02",
-              title: "Agent executes autonomously",
-              body: "Dragent monitors markets 24/7, makes decisions, and executes trades — no human input needed.",
+              title: "Agent decides autonomously",
+              body: "Dragent monitors markets 24/7, analyses conditions against your strategy, and makes decisions autonomously — no human input needed.",
             },
             {
               step: "03",
-              title: "Every trade proven on Kite",
-              body: "Before each trade, the agent commits a cryptographic proof of its reasoning to Kite chain. Immutable. Verifiable.",
+              title: "Every decision proven on Kite",
+              body: "Before each decision, the agent commits a cryptographic proof of its reasoning to Kite chain. Immutable, verifiable, tamper-proof.",
             },
           ].map((item) => (
             <div key={item.step} className="flex flex-col gap-3">
@@ -117,7 +118,7 @@ export default function LandingPage() {
       <section className="px-8 py-20 max-w-5xl mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
-            { value: "100%", label: "Trades explained" },
+            { value: "100%", label: "Decisions explained" },
             { value: "On-chain", label: "Reputation system" },
             { value: "0", label: "Black boxes" },
             { value: "Kite L1", label: "Settlement layer" },

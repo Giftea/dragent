@@ -338,14 +338,14 @@ export default function DashboardPage() {
 
         {/* Trade feed */}
         <div>
-          <h2 className="text-lg font-medium mb-4">Trade feed</h2>
+          <h2 className="text-lg font-medium mb-4">Decision feed</h2>
           {onChainTrades.length === 0 ? (
             <Card className="bg-zinc-900 border-zinc-800">
               <CardContent className="flex flex-col items-center gap-3 py-16">
-                <p className="text-zinc-400 text-sm">No trades yet.</p>
+                <p className="text-zinc-400 text-sm">No decisions yet.</p>
                 <p className="text-zinc-600 text-xs max-w-sm text-center">
-                  The agent is scanning markets. Trades will appear here when
-                  entry conditions are met.
+                  The agent is monitoring markets. Decisions will appear here
+                  when your strategy conditions are met.
                 </p>
               </CardContent>
             </Card>
@@ -363,7 +363,9 @@ export default function DashboardPage() {
                               : "bg-red-500/10 text-red-400 border-red-500/20"
                           }
                         >
-                          {trade.direction}
+                          {trade.direction === "BUY"
+                            ? "↑ BUY SIGNAL"
+                            : "↓ SELL SIGNAL"}
                         </Badge>
                         <span className="text-white font-medium">
                           {trade.asset}
@@ -397,7 +399,7 @@ export default function DashboardPage() {
                         rel="noopener noreferrer"
                         className="text-xs text-blue-400 hover:underline"
                       >
-                        View on Kite ↗
+                        View decision proof on Kite ↗
                       </a>
                       <span className="text-xs text-zinc-600 font-mono">
                         Hash: {trade.reasonHash?.slice(0, 18)}...

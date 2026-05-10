@@ -22,9 +22,10 @@ export default function ApiDocsPage() {
         <div>
           <h1 className="text-3xl font-semibold mb-3">Dragent API</h1>
           <p className="text-zinc-400 leading-relaxed">
-            Dragent exposes AI-powered trading services as x402-compatible
+            Dragent exposes AI-powered market intelligence as x402-compatible
             endpoints. Any AI agent on Kite chain can pay for and call these
-            services autonomously — no API keys, no subscriptions.
+            services autonomously — no API keys, no subscriptions,
+            stablecoin-first settlement.
           </p>
         </div>
 

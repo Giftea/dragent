@@ -89,8 +89,29 @@ async function runAgentCycle(
     ETH: "ethereum",
     BTC: "bitcoin",
     SOL: "solana",
+    AVAX: "avalanche-2",
     BNB: "binancecoin",
     ARB: "arbitrum",
+  };
+
+  const chainMap: Record<
+    string,
+    {
+      rpc: string;
+      dex: string;
+      usdcAddress: string;
+    }
+  > = {
+    avalanche: {
+      rpc: "https://api.avax.network/ext/bc/C/rpc",
+      dex: "0x60aE616a2155Ee3d9A68541Ba4544862310933d4", 
+      usdcAddress: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+    },
+    kite: {
+      rpc: "https://rpc.gokite.ai",
+      dex: "", // No DEX on Kite yet [future use]
+      usdcAddress: "0x7aB6f3ed87C42eF0aDb67Ed95090f8bF5240149e",
+    },
   };
 
   for (const symbol of assets) {

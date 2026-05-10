@@ -43,11 +43,11 @@ export default async function PassportPage({
   const [onChainTrades, onChainRep] = await Promise.all([
     // getAgentTrades(agent.wallet, 10),
     // getAgentReputation(agent.wallet),
-     getAgentTradesByAddresses([
-    agent.wallet,
-    "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"
-  ], 10),
-  getAgentReputation("0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"),
+    getAgentTradesByAddresses(
+      [agent.wallet, "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"],
+      10,
+    ),
+    getAgentReputation("0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"),
   ]);
 
   const tier = onChainRep?.tier ?? 0;
@@ -149,7 +149,7 @@ export default async function PassportPage({
 
         <div>
           <p className="text-xs text-zinc-500 uppercase tracking-wider mb-4">
-            Recent trades
+            Decision history
           </p>
           {onChainTrades.length === 0 ? (
             <p className="text-zinc-600 text-sm">No trades yet.</p>
@@ -200,8 +200,8 @@ export default async function PassportPage({
 
         <div className="flex flex-col items-center gap-2 text-center">
           <p className="text-xs text-zinc-600">
-            All trade data is verified on Kite chain. Reputation scores are
-            immutable and tamper-proof.
+            All decisions are cryptographically proven on Kite chain. Reputation
+            scores are immutable and tamper-proof.
           </p>
           <a
             href={`https://testnet.kitescan.ai/address/${agent.vault_address}`}
