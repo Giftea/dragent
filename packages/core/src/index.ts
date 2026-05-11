@@ -5,3 +5,6 @@ export * from "./journal/reasonGenerator";
 export * from "./gasless/gaslessTransfer";
 export * from "./arb/arbDetector";
 export * from "./arb/arbRunner";
+export * from "./allocation/protocolMonitor";
+export * from "./allocation/allocationAgent";
+export * from "./allocation/allocationRunner";

@@ -6,7 +6,8 @@ import {
   getRecentTrades,
   reputationRegistry,
 } from "../services/contractService";
-import { startAgent, stopAgent, startArbAgent, stopArbAgent } from "../agents/agentRunner";
+import { startAgent, stopAgent, startArbAgent, stopArbAgent, startAllocationAgent, stopAllocationAgent } from "../agents/agentRunner";
+import { fetchProtocolYields } from "@dragent/core";
 import { ethers } from "ethers";
 import { getAAWalletAddress, getAAWalletBalance } from "../services/aaService";
 import { requirePayment } from "../middleware/x402";
@@ -292,6 +293,41 @@ router.post("/:id/arb/stop", async (req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to stop arb agent" });
+  }
+});
+
+// POST /api/agents/:id/allocation/start
+router.post("/:id/allocation/start", async (req, res) => {
+  try {
+    const agentId = parseInt(req.params.id);
+    await startAllocationAgent(agentId);
+    return res.json({ status: "allocation_active", agentId });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to start allocation agent" });
+  }
+});
+
+// POST /api/agents/:id/allocation/stop
+router.post("/:id/allocation/stop", async (req, res) => {
+  try {
+    const agentId = parseInt(req.params.id);
+    stopAllocationAgent(agentId);
+    return res.json({ status: "allocation_stopped", agentId });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to stop allocation agent" });
+  }
+});
+
+// GET /api/agents/:id/allocation/yields
+router.get("/:id/allocation/yields", async (_req, res) => {
+  try {
+    const yields = await fetchProtocolYields();
+    return res.json({ yields });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch yields" });
   }
 });
 

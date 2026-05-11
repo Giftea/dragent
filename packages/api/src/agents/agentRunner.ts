@@ -4,6 +4,7 @@ import {
   generateReason,
   TradingRules,
   runArbCycle,
+  runAllocationCycle,
 } from "@dragent/core";
 import { ethers } from "ethers";
 import { query } from "../db";
@@ -266,5 +267,34 @@ export function stopArbAgent(agentId: number) {
     clearInterval(interval);
     runningArbAgents.delete(agentId);
     console.log(`⏹ Arb agent ${agentId} stopped`);
+  }
+}
+
+// ── Allocation agent ───────────────────────────────────────
+const runningAllocationAgents = new Map<number, NodeJS.Timeout>();
+
+export async function startAllocationAgent(agentId: number) {
+  if (runningAllocationAgents.has(agentId)) {
+    console.log(`Allocation agent ${agentId} already running`);
+    return;
+  }
+
+  console.log(`📊 Starting allocation agent ${agentId}`);
+
+  await runAllocationCycle(agentId).catch(console.error);
+
+  const interval = setInterval(async () => {
+    await runAllocationCycle(agentId).catch(console.error);
+  }, 6 * 60 * 60_000); // every 6 hours
+
+  runningAllocationAgents.set(agentId, interval);
+}
+
+export function stopAllocationAgent(agentId: number) {
+  const interval = runningAllocationAgents.get(agentId);
+  if (interval) {
+    clearInterval(interval);
+    runningAllocationAgents.delete(agentId);
+    console.log(`⏹ Allocation agent ${agentId} stopped`);
   }
 }
