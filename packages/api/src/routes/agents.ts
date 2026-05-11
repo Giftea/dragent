@@ -17,7 +17,7 @@ const router = Router();
 // POST /api/agents — create agent + deploy vault for user
 router.post("/", async (req, res) => {
   try {
-    const { walletAddress, strategy, rules } = req.body;
+    const { walletAddress, strategy, rules, agentModes } = req.body;
 
     if (!walletAddress || !strategy) {
       return res
@@ -55,11 +55,13 @@ router.post("/", async (req, res) => {
     console.log(`Deploying vault for user ${walletAddress}...`);
     const vaultAddress = await deployUserVault(agentWallet.address);
 
+    const modes = agentModes ?? { signal: true, arb: false, allocation: false };
+
     // Save agent to DB
     const agentRes = await query(
       `INSERT INTO agents
-        (user_id, wallet, vault_address, strategy, rules, status)
-       VALUES ($1, $2, $3, $4, $5, 'inactive')
+        (user_id, wallet, vault_address, strategy, rules, status, agent_modes)
+       VALUES ($1, $2, $3, $4, $5, 'inactive', $6)
        RETURNING id`,
       [
         userId,
@@ -67,6 +69,7 @@ router.post("/", async (req, res) => {
         vaultAddress,
         strategy,
         JSON.stringify(rules),
+        JSON.stringify(modes),
       ],
     );
 

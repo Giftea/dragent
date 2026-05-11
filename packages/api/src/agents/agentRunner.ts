@@ -272,6 +272,11 @@ export async function startArbAgent(agentId: number) {
 
   const interval = setInterval(() => runCycleAndSave().catch(console.error), 5 * 60_000);
   runningArbAgents.set(agentId, interval);
+
+  await query(
+    `UPDATE agents SET agent_modes = agent_modes || '{"arb": true}'::jsonb WHERE id = $1`,
+    [agentId],
+  );
 }
 
 export function stopArbAgent(agentId: number) {
@@ -306,6 +311,11 @@ export async function startAllocationAgent(agentId: number) {
 
   const interval = setInterval(() => runCycleAndSave().catch(console.error), 6 * 60 * 60_000);
   runningAllocationAgents.set(agentId, interval);
+
+  await query(
+    `UPDATE agents SET agent_modes = agent_modes || '{"allocation": true}'::jsonb WHERE id = $1`,
+    [agentId],
+  );
 }
 
 export function stopAllocationAgent(agentId: number) {

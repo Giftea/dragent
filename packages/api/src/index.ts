@@ -4,7 +4,7 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 import { query } from "./db";
-import { startAgent } from "./agents/agentRunner";
+import { startAgent, startArbAgent, startAllocationAgent } from "./agents/agentRunner";
 import agentRoutes from "./routes/agents";
 import strategyRoutes from "./routes/strategy";
 import telegramRoutes from "./routes/telegram";
@@ -36,14 +36,24 @@ app.get("/health", (_, res) => {
 async function resumeActiveAgents() {
   const result = await query("SELECT * FROM agents WHERE status = 'active'");
   for (const agent of result.rows) {
-    await startAgent({
-      agentId: agent.id,
-      agentWallet: agent.wallet,
-      vaultAddress: agent.vault_address,
-      strategy: agent.strategy,
-      privateKey: process.env.PRIVATE_KEY!,
-    });
-    console.log(`♻️  Resumed agent ${agent.id}`);
+    const modes = agent.agent_modes ?? { signal: true, arb: false, allocation: false };
+
+    if (modes.signal) {
+      await startAgent({
+        agentId: agent.id,
+        agentWallet: agent.wallet,
+        vaultAddress: agent.vault_address,
+        strategy: agent.strategy,
+        privateKey: process.env.PRIVATE_KEY!,
+      });
+    }
+    if (modes.arb) {
+      await startArbAgent(agent.id);
+    }
+    if (modes.allocation) {
+      await startAllocationAgent(agent.id);
+    }
+    console.log(`♻️  Resumed agent ${agent.id} (signal=${modes.signal} arb=${modes.arb} allocation=${modes.allocation})`);
   }
 }
 
