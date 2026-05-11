@@ -22,6 +22,10 @@ async function main() {
   await tx.wait();
   console.log("✅ AgentVault authorized to call ReputationRegistry");
 
+  const tx1b = await registry.authorizeCaller(wallet.address);
+  await tx1b.wait();
+  console.log("✅ Deployer authorized as caller in ReputationRegistry");
+
   const abi2 = JSON.parse(
     fs.readFileSync("./artifacts/contracts/TradeJournal.sol/TradeJournal.json", "utf8")
   ).abi;

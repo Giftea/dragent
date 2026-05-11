@@ -25,7 +25,7 @@
 
 // Strategy: "${strategy}"
 
-// Supported assets: ETH, BTC, SOL, BNB, ARB
+// Supported assets: ETH, BTC, SOL, AVAX, BNB, ARB
 
 // Return ONLY valid JSON, no explanation, no markdown:
 // {
@@ -154,7 +154,7 @@ router.post(
 
 Strategy: "${strategy}"
 
-Supported assets: ETH, BTC, SOL, BNB, ARB
+Supported assets: ETH, BTC, SOL, AVAX, BNB, ARB
 
 Return ONLY valid JSON, no explanation, no markdown:
 {

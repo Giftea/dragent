@@ -13,6 +13,8 @@ import {
   getAgentTradesByAddresses,
 } from "@/lib/goldsky";
 
+const DEPLOYER = "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7";
+
 const TIER_LABELS = ["Sandbox", "Apprentice", "Trader", "Expert"];
 const TIER_COLORS = [
   "text-zinc-400 border-zinc-700",
@@ -41,13 +43,8 @@ export default async function PassportPage({
   }
 
   const [onChainTrades, onChainRep] = await Promise.all([
-    // getAgentTrades(agent.wallet, 10),
-    // getAgentReputation(agent.wallet),
-    getAgentTradesByAddresses(
-      [agent.wallet, "0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"],
-      10,
-    ),
-    getAgentReputation("0x6f82ec71d9d8b2419beed7f6b02a865d21c862c7"),
+    getAgentTradesByAddresses([agent.wallet, DEPLOYER], 10),
+    getAgentReputation(agent.wallet),
   ]);
 
   const tier = onChainRep?.tier ?? 0;

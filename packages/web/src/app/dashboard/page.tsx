@@ -10,6 +10,8 @@ import {
   getAgentTrades as getDbTrades,
   startAgent,
   stopAgent,
+  startArbAgent,
+  stopArbAgent,
 } from "@/lib/api";
 import {
   getAgentTradesByAddresses,
@@ -99,6 +101,7 @@ export default function DashboardPage() {
   const [notFound, setNotFound] = useState(false);
   const [acting, setActing] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState(false);
+  const [arbActive, setArbActive] = useState(false);
 
   // Find agent by wallet
   useEffect(() => {
@@ -131,10 +134,30 @@ export default function DashboardPage() {
 
   const { data: onChainRep } = useQuery({
     queryKey: ["goldsky-rep", agentId],
-    queryFn: () => getAgentReputation(DEPLOYER),
-    enabled: !!agentId,
+    queryFn: async () => {
+      if (!agent?.wallet) return null;
+      return getAgentReputation(agent.wallet);
+    },
+    enabled: !!agent?.wallet,
     refetchInterval: 30_000,
   });
+
+  const handleArbToggle = async () => {
+    if (!agentId) return;
+    try {
+      if (arbActive) {
+        await stopArbAgent(agentId);
+        setArbActive(false);
+        toast({ title: "Arb scanner stopped" });
+      } else {
+        await startArbAgent(agentId);
+        setArbActive(true);
+        toast({ title: "Arb scanner active — monitoring ETH, BTC, AVAX across Avalanche and Kite" });
+      }
+    } catch {
+      toast({ title: "Failed to toggle arb scanner", variant: "destructive" });
+    }
+  };
 
   const handleToggle = async () => {
     if (!agentId) return;
@@ -228,6 +251,18 @@ export default function DashboardPage() {
           >
             Public passport →
           </a>
+          <Button
+            size="sm"
+            variant="outline"
+            className={
+              arbActive
+                ? "border-purple-700 text-purple-400"
+                : "border-zinc-700 text-zinc-400"
+            }
+            onClick={handleArbToggle}
+          >
+            {arbActive ? "🔀 Arb active" : "🔀 Start arb"}
+          </Button>
           <Button
             size="sm"
             variant={agent.status === "active" ? "outline" : "default"}

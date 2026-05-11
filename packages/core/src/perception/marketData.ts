@@ -11,40 +11,97 @@ export interface MarketSignal {
   timestamp:      number;
 }
 
-// ── Fetch price + 4h change from CoinGecko (free, no key needed) ──
+// ── Simple price cache to avoid rate limits ───────────────
+const priceCache = new Map<string, { price: number; timestamp: number }>();
+const CACHE_TTL  = 30_000; // 30 seconds
+
 async function fetchPriceData(coinId: string): Promise<{
   price: number;
   change4h: number;
   volume24h: number;
 }> {
-  const res = await axios.get(
-    `https://api.coingecko.com/api/v3/simple/price`,
-    {
-      params: {
-        ids: coinId,
-        vs_currencies: "usd",
-        include_24hr_vol: true,
-        include_24hr_change: true,
-      },
-    }
-  );
+  const cached = priceCache.get(coinId);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    return { price: cached.price, change4h: 0, volume24h: 0 };
+  }
 
-  const data = res.data[coinId];
-  return {
-    price:    data.usd,
-    change4h: data.usd_24h_change / 6, // approximate 4h from 24h
-    volume24h: data.usd_24h_vol,
-  };
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await axios.get(
+        `https://api.coingecko.com/api/v3/simple/price`,
+        {
+          params: {
+            ids:                 coinId,
+            vs_currencies:       "usd",
+            include_24hr_vol:    true,
+            include_24hr_change: true,
+          },
+        }
+      );
+
+      const data   = res.data[coinId];
+      const result = {
+        price:     data.usd,
+        change4h:  data.usd_24h_change / 6,
+        volume24h: data.usd_24h_vol,
+      };
+
+      priceCache.set(coinId, { price: data.usd, timestamp: Date.now() });
+      return result;
+
+    } catch (err: unknown) {
+      const status = (err as { response?: { status: number } }).response?.status;
+      if (status === 429 && attempt < 3) {
+        const wait = attempt * 10_000; // 10s, 20s
+        console.warn(`⚠️  CoinGecko rate limit, waiting ${wait / 1000}s...`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  throw new Error(`Failed to fetch price for ${coinId}`);
 }
 
-// ── Fetch OHLC for RSI calculation ────────────────────────
+// ── OHLC cache ────────────────────────────────────────────
+const ohlcCache = new Map<string, { closes: number[]; timestamp: number }>();
+const OHLC_CACHE_TTL = 5 * 60_000; // 5 minutes — OHLC doesn't change that fast
+
 async function fetchOHLC(coinId: string): Promise<number[]> {
-  const res = await axios.get(
-    `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc`,
-    { params: { vs_currency: "usd", days: 1 } }
-  );
-  // Returns array of [timestamp, open, high, low, close]
-  return res.data.map((candle: number[]) => candle[4]); // closing prices
+  const cached = ohlcCache.get(coinId);
+  if (cached && Date.now() - cached.timestamp < OHLC_CACHE_TTL) {
+    return cached.closes;
+  }
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await axios.get(
+        `https://api.coingecko.com/api/v3/coins/${coinId}/ohlc`,
+        { params: { vs_currency: "usd", days: 1 } }
+      );
+      const closes = res.data.map((candle: number[]) => candle[4]);
+      ohlcCache.set(coinId, { closes, timestamp: Date.now() });
+      return closes;
+
+    } catch (err: unknown) {
+      const status = (err as { response?: { status: number } }).response?.status;
+      if (status === 429 && attempt < 3) {
+        const wait = attempt * 15_000;
+        console.warn(`⚠️  CoinGecko OHLC rate limit (${coinId}), waiting ${wait / 1000}s...`);
+        await new Promise(r => setTimeout(r, wait));
+        continue;
+      }
+      const stale = ohlcCache.get(coinId);
+      if (stale) {
+        console.warn(`⚠️  Using stale OHLC for ${coinId}`);
+        return stale.closes;
+      }
+      console.warn(`⚠️  No OHLC data for ${coinId}, using neutral RSI`);
+      return [];
+    }
+  }
+  return [];
 }
 
 // ── RSI calculation ───────────────────────────────────────
@@ -96,17 +153,29 @@ function analyzeTrend(rsi: number, change4h: number): {
   return { trend, confidence };
 }
 
+const COINGECKO_IDS: Record<string, string> = {
+  ETH:  "ethereum",
+  BTC:  "bitcoin",
+  SOL:  "solana",
+  AVAX: "avalanche-2",
+  BNB:  "binancecoin",
+  ARB:  "arbitrum",
+};
+
 // ── Main export: get signal for an asset ─────────────────
 export async function getMarketSignal(
-  asset: string,          // e.g. "ETH"
-  coinId: string          // e.g. "ethereum"
+  asset:   string,   // e.g. "ETH"
+  coinId?: string    // e.g. "ethereum" — falls back to COINGECKO_IDS
 ): Promise<MarketSignal> {
+  const id = coinId ?? COINGECKO_IDS[asset];
+  if (!id) throw new Error(`Unknown asset: ${asset}`);
+
   const [priceData, closes] = await Promise.all([
-    fetchPriceData(coinId),
-    fetchOHLC(coinId),
+    fetchPriceData(id),
+    fetchOHLC(id),
   ]);
 
-  const rsi              = calculateRSI(closes);
+  const rsi                   = calculateRSI(closes);
   const { trend, confidence } = analyzeTrend(rsi, priceData.change4h);
 
   return {

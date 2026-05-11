@@ -1,15 +1,66 @@
 import {
   getMarketSignal,
-  interpretStrategy,
   evaluateSignal,
   generateReason,
-  logTradeOnChain,
   TradingRules,
+  runArbCycle,
 } from "@dragent/core";
 import { ethers } from "ethers";
 import { query } from "../db";
 import { notifyTrade } from "../services/notificationService";
-import { logTradeViaAA } from "../services/aaService";
+
+import { reputationRegistry } from "../services/contractService";
+
+// ── Evaluate outcome 5 minutes after decision ─────────────
+async function settleDecisionOutcome(
+  agentWallet: string,
+  asset: string,
+  direction: string,
+  entryPrice: number,
+  agentId: number,
+  tradeDbId: number
+): Promise<void> {
+  await new Promise((r) => setTimeout(r, 5 * 60 * 1000));
+
+  try {
+    const assetMap: Record<string, string> = {
+      ETH: "ethereum",
+      BTC: "bitcoin",
+      SOL: "solana",
+    };
+
+    const coinId = assetMap[asset] ?? "ethereum";
+    const signal = await getMarketSignal(asset, coinId);
+    const exitPrice = signal.price;
+    const priceMove = ((exitPrice - entryPrice) / entryPrice) * 10000; // bps
+
+    const won =
+      direction === "BUY" ? exitPrice > entryPrice : exitPrice < entryPrice;
+    const pnlBps =
+      direction === "BUY" ? Math.round(priceMove) : Math.round(-priceMove);
+
+    console.log(`[Agent ${agentId}] Settling decision: ${asset} ${direction}`);
+    console.log(`   Entry: $${entryPrice} → Exit: $${exitPrice}`);
+    console.log(`   Result: ${won ? "✅ WON" : "❌ LOST"} (${pnlBps} bps)`);
+
+    const tx = await reputationRegistry.recordTrade(
+      agentWallet,
+      won,
+      BigInt(pnlBps)
+    );
+    await tx.wait();
+
+    console.log(`[Agent ${agentId}] ✅ Reputation updated on Kite chain`);
+
+    await query(`UPDATE trades SET won = $1, pnl_bps = $2 WHERE id = $3`, [
+      won,
+      pnlBps,
+      tradeDbId,
+    ]);
+  } catch (err) {
+    console.error(`[Agent ${agentId}] Settlement error:`, err);
+  }
+}
 
 interface AgentConfig {
   agentId: number;
@@ -52,7 +103,7 @@ export async function startAgent(config: AgentConfig) {
     } catch (err) {
       console.error(`Agent ${config.agentId} cycle error:`, err);
     }
-  }, 60_000);
+  }, 90_000); // every 90 seconds instead of 60
 
   runningAgents.set(config.agentId, interval);
 
@@ -86,32 +137,12 @@ async function runAgentCycle(
 ) {
   const assets = (rules.assets as string[]) ?? ["ETH"];
   const assetMap: Record<string, string> = {
-    ETH: "ethereum",
-    BTC: "bitcoin",
-    SOL: "solana",
+    ETH:  "ethereum",
+    BTC:  "bitcoin",
+    SOL:  "solana",
     AVAX: "avalanche-2",
-    BNB: "binancecoin",
-    ARB: "arbitrum",
-  };
-
-  const chainMap: Record<
-    string,
-    {
-      rpc: string;
-      dex: string;
-      usdcAddress: string;
-    }
-  > = {
-    avalanche: {
-      rpc: "https://api.avax.network/ext/bc/C/rpc",
-      dex: "0x60aE616a2155Ee3d9A68541Ba4544862310933d4", 
-      usdcAddress: "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
-    },
-    kite: {
-      rpc: "https://rpc.gokite.ai",
-      dex: "", // No DEX on Kite yet [future use]
-      usdcAddress: "0x7aB6f3ed87C42eF0aDb67Ed95090f8bF5240149e",
-    },
+    BNB:  "binancecoin",
+    ARB:  "arbitrum",
   };
 
   for (const symbol of assets) {
@@ -124,65 +155,116 @@ async function runAgentCycle(
       `[Agent ${config.agentId}] ${symbol} — RSI: ${signal.rsi} — ${evaluation.action}`,
     );
 
-    if (!evaluation.shouldTrade || evaluation.action === "HOLD") continue;
+    if (evaluation.shouldTrade && evaluation.action !== "HOLD") {
+      const sizeUSDC = 2;
 
-    const sizeUSDC = 2;
-
-    console.log(`[Agent ${config.agentId}] Generating reason...`);
-    const reason = await generateReason(
-      signal,
-      evaluation.action,
-      sizeUSDC,
-      strategy,
-    );
-
-    // Generate reason hash locally
-    const { ethers } = await import("ethers");
-    const reasonHash = ethers.keccak256(ethers.toUtf8Bytes(reason));
-
-    // Log trade via AA SDK
-    console.log(`[Agent ${config.agentId}] Logging via AA SDK...`);
-    const { txHash } = await logTradeViaAA(
-      config.agentWallet,
-      process.env.TRADE_JOURNAL_ADDRESS!,
-      signal.asset,
-      evaluation.action,
-      BigInt(Math.round(sizeUSDC * 1e6)),
-      BigInt(Math.round(signal.price * 1e8)),
-      reasonHash,
-    );
-
-    // Use timestamp as local trade reference since tradeId comes from chain event
-    const localTradeRef = Date.now();
-
-    await query(
-      `INSERT INTO trades
-        (agent_id, trade_id, asset, direction, size_usdc, price_usd, reason, reason_hash, tx_hash)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-      [
-        config.agentId,
-        localTradeRef,
-        signal.asset,
+      console.log(`[Agent ${config.agentId}] Generating reason...`);
+      const reason = await generateReason(
+        signal,
         evaluation.action,
         sizeUSDC,
+        strategy,
+      );
+
+      const reasonHash = ethers.keccak256(ethers.toUtf8Bytes(reason));
+
+      // Skip AA SDK until bundler is stable — use direct tx
+      const provider = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
+      const wallet   = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+      const journal  = new ethers.Contract(
+        process.env.TRADE_JOURNAL_ADDRESS!,
+        ["function logTrade(string,string,uint256,uint256,bytes32) returns (uint256)"],
+        wallet,
+      );
+
+      const tx      = await journal.logTrade(
+        signal.asset,
+        evaluation.action,
+        BigInt(Math.round(sizeUSDC * 1e6)),
+        BigInt(Math.round(signal.price * 1e8)),
+        reasonHash,
+      );
+      const receipt = await tx.wait();
+      const txHash  = receipt.hash;
+      console.log(`[Agent ${config.agentId}] ✅ Decision logged: ${txHash}`);
+
+      const localTradeRef = Date.now();
+
+      await query(
+        `INSERT INTO trades
+          (agent_id, trade_id, asset, direction, size_usdc, price_usd, reason, reason_hash, tx_hash)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+        [
+          config.agentId,
+          localTradeRef,
+          signal.asset,
+          evaluation.action,
+          sizeUSDC,
+          signal.price,
+          reason,
+          reasonHash,
+          txHash,
+        ],
+      );
+
+      const tradeDbRes = await query(
+        "SELECT id FROM trades WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 1",
+        [config.agentId],
+      );
+      const tradeDbId = tradeDbRes.rows[0]?.id;
+
+      settleDecisionOutcome(
+        config.agentWallet,
+        signal.asset,
+        evaluation.action,
         signal.price,
+        config.agentId,
+        tradeDbId,
+      ).catch((err) => console.error("Settlement error:", err));
+
+      await notifyTrade({
+        agentId: config.agentId,
+        asset: signal.asset,
+        direction: evaluation.action as "BUY" | "SELL",
+        sizeUSDC,
+        price: signal.price,
         reason,
         reasonHash,
         txHash,
-      ],
-    );
+      });
 
-    await notifyTrade({
-      agentId: config.agentId,
-      asset: signal.asset,
-      direction: evaluation.action as "BUY" | "SELL",
-      sizeUSDC,
-      price: signal.price,
-      reason,
-      reasonHash,
-      txHash,
-    });
+      console.log(`[Agent ${config.agentId}] ✅ Trade logged on Kite: ${txHash}`);
+    }
 
-    console.log(`[Agent ${config.agentId}] ✅ Trade logged on Kite: ${txHash}`);
+    await new Promise(r => setTimeout(r, 5000)); // 5 seconds between assets
+  }
+}
+
+// ── Arb agent ─────────────────────────────────────────────
+const runningArbAgents = new Map<number, NodeJS.Timeout>();
+
+export async function startArbAgent(agentId: number) {
+  if (runningArbAgents.has(agentId)) {
+    console.log(`Arb agent ${agentId} already running`);
+    return;
+  }
+
+  console.log(`🔀 Starting arb agent ${agentId}`);
+
+  await runArbCycle(agentId).catch(console.error);
+
+  const interval = setInterval(async () => {
+    await runArbCycle(agentId).catch(console.error);
+  }, 5 * 60_000);
+
+  runningArbAgents.set(agentId, interval);
+}
+
+export function stopArbAgent(agentId: number) {
+  const interval = runningArbAgents.get(agentId);
+  if (interval) {
+    clearInterval(interval);
+    runningArbAgents.delete(agentId);
+    console.log(`⏹ Arb agent ${agentId} stopped`);
   }
 }

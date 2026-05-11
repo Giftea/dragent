@@ -174,7 +174,7 @@ export default function LaunchPage() {
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
               <Textarea
-                placeholder={`Examples:\n"Buy ETH when RSI drops below 30. Never risk more than 2% per trade. Stop loss at 5%."\n\n"Buy BTC and ETH when RSI is below 35 and trend is bearish. Take profit at 20%."\n\n"Buy BTC when RSI drops below 28. Stop loss 4%, take profit 12%."`}
+                placeholder={`Examples:\n"Buy ETH when RSI drops below 30. Never risk more than 2% per decision."\n\n"Monitor BTC, ETH, and SOL. Signal buy when RSI is below 35 and trend is bearish."\n\n"Watch AVAX when RSI drops below 28. Stop loss 4%, take profit 12%."`}
                 className="min-h-40 bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 resize-none"
                 value={strategy}
                 onChange={(e) => setStrategy(e.target.value)}

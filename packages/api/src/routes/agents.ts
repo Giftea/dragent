@@ -6,7 +6,7 @@ import {
   getRecentTrades,
   reputationRegistry,
 } from "../services/contractService";
-import { startAgent, stopAgent } from "../agents/agentRunner";
+import { startAgent, stopAgent, startArbAgent, stopArbAgent } from "../agents/agentRunner";
 import { ethers } from "ethers";
 import { getAAWalletAddress, getAAWalletBalance } from "../services/aaService";
 import { requirePayment } from "../middleware/x402";
@@ -270,5 +270,29 @@ router.get(
     }
   },
 );
+
+// POST /api/agents/:id/arb/start
+router.post("/:id/arb/start", async (req, res) => {
+  try {
+    const agentId = parseInt(req.params.id);
+    await startArbAgent(agentId);
+    return res.json({ status: "arb_active", agentId });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to start arb agent" });
+  }
+});
+
+// POST /api/agents/:id/arb/stop
+router.post("/:id/arb/stop", async (req, res) => {
+  try {
+    const agentId = parseInt(req.params.id);
+    stopArbAgent(agentId);
+    return res.json({ status: "arb_stopped", agentId });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to stop arb agent" });
+  }
+});
 
 export default router;

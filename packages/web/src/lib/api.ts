@@ -46,6 +46,16 @@ export async function getAgentByWallet(wallet: string) {
   return res.data;
 }
 
+export async function startArbAgent(agentId: number) {
+  const res = await api.post(`/api/agents/${agentId}/arb/start`);
+  return res.data;
+}
+
+export async function stopArbAgent(agentId: number) {
+  const res = await api.post(`/api/agents/${agentId}/arb/stop`);
+  return res.data;
+}
+
 export async function updateStrategy(
   agentId: number,
   strategy: string,

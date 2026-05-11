@@ -36,7 +36,7 @@ export async function interpretStrategy(
 
 Strategy: "${naturalLanguageStrategy}"
 
-Supported assets: ETH, BTC, SOL, BNB, ARB
+Supported assets: ETH, BTC, SOL, AVAX, BNB, ARB
 
 Return ONLY valid JSON, no explanation, no markdown:
 {
