@@ -1,8 +1,8 @@
-import { ethers }            from "ethers";
-import * as path              from "path";
-import * as fs                from "fs";
-import * as dotenv            from "dotenv";
-import { analyzeAllocation }  from "./allocationAgent";
+import { ethers }           from "ethers";
+import * as path             from "path";
+import * as fs               from "fs";
+import * as dotenv           from "dotenv";
+import { analyzeAllocation } from "./allocationAgent";
 dotenv.config();
 
 function loadTradeJournal() {
@@ -18,7 +18,17 @@ function loadTradeJournal() {
   return new ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS!, abi, wallet);
 }
 
-export async function runAllocationCycle(agentId: number): Promise<void> {
+export interface AllocationCycleResult {
+  txHash:     string;
+  reasonHash: string;
+  reason:     string;
+  asset:      string;
+  apy:        number;
+}
+
+export async function runAllocationCycle(
+  agentId: number
+): Promise<AllocationCycleResult | null> {
   console.log(`[Allocation Agent ${agentId}] Analysing DeFi yields...`);
 
   try {
@@ -26,10 +36,13 @@ export async function runAllocationCycle(agentId: number): Promise<void> {
 
     if (!decision) {
       console.log(`[Allocation Agent ${agentId}] No suitable allocation found`);
-      return;
+      return null;
     }
 
     const { recommended, reason } = decision;
+    const asset      = `${recommended.asset}-${recommended.protocol}`;
+    const journal    = loadTradeJournal();
+    const reasonHash = ethers.keccak256(ethers.toUtf8Bytes(reason));
 
     console.log(`[Allocation Agent ${agentId}] Best yield: ${recommended.protocol}`);
     console.log(`   APY: ${recommended.apy}%`);
@@ -37,21 +50,21 @@ export async function runAllocationCycle(agentId: number): Promise<void> {
     console.log(`   Risk: ${recommended.risk}`);
     console.log(`   Reason: "${reason}"`);
 
-    const journal    = loadTradeJournal();
-    const reasonHash = ethers.keccak256(ethers.toUtf8Bytes(reason));
-
-    const tx = await journal.logTrade(
-      `${recommended.asset}-${recommended.protocol}`,
+    const tx      = await journal.logTrade(
+      asset,
       "BUY",
       BigInt(100 * 1e6),
       BigInt(Math.round(recommended.apy * 1e8)),
       reasonHash
     );
-
     const receipt = await tx.wait();
+
     console.log(`[Allocation Agent ${agentId}] ✅ Allocation logged on Kite: ${receipt.hash}`);
+
+    return { txHash: receipt.hash, reasonHash, reason, asset, apy: recommended.apy };
 
   } catch (err) {
     console.error(`[Allocation Agent ${agentId}] Error:`, err);
+    return null;
   }
 }

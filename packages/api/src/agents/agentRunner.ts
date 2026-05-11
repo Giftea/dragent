@@ -245,19 +245,32 @@ async function runAgentCycle(
 const runningArbAgents = new Map<number, NodeJS.Timeout>();
 
 export async function startArbAgent(agentId: number) {
-  if (runningArbAgents.has(agentId)) {
-    console.log(`Arb agent ${agentId} already running`);
-    return;
-  }
+  if (runningArbAgents.has(agentId)) return;
 
   console.log(`🔀 Starting arb agent ${agentId}`);
 
-  await runArbCycle(agentId).catch(console.error);
+  const agentRes = await query(
+    "SELECT wallet FROM agents WHERE id = $1",
+    [agentId]
+  );
+  const agentWallet = agentRes.rows[0]?.wallet;
+  if (!agentWallet) throw new Error("Agent wallet not found");
 
-  const interval = setInterval(async () => {
-    await runArbCycle(agentId).catch(console.error);
-  }, 5 * 60_000);
+  const runCycleAndSave = async () => {
+    const results = await runArbCycle(agentId, agentWallet);
+    for (const r of results) {
+      await query(
+        `INSERT INTO trades
+          (agent_id, trade_id, asset, direction, size_usdc, price_usd, reason, reason_hash, tx_hash)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [agentId, Date.now(), r.asset, r.direction, 100, r.price, r.reason, r.reasonHash, r.txHash]
+      );
+    }
+  };
 
+  await runCycleAndSave().catch(console.error);
+
+  const interval = setInterval(() => runCycleAndSave().catch(console.error), 5 * 60_000);
   runningArbAgents.set(agentId, interval);
 }
 
@@ -274,19 +287,24 @@ export function stopArbAgent(agentId: number) {
 const runningAllocationAgents = new Map<number, NodeJS.Timeout>();
 
 export async function startAllocationAgent(agentId: number) {
-  if (runningAllocationAgents.has(agentId)) {
-    console.log(`Allocation agent ${agentId} already running`);
-    return;
-  }
+  if (runningAllocationAgents.has(agentId)) return;
 
   console.log(`📊 Starting allocation agent ${agentId}`);
 
-  await runAllocationCycle(agentId).catch(console.error);
+  const runCycleAndSave = async () => {
+    const result = await runAllocationCycle(agentId);
+    if (!result) return;
+    await query(
+      `INSERT INTO trades
+        (agent_id, trade_id, asset, direction, size_usdc, price_usd, reason, reason_hash, tx_hash)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [agentId, Date.now(), result.asset, "BUY", 100, result.apy, result.reason, result.reasonHash, result.txHash]
+    );
+  };
 
-  const interval = setInterval(async () => {
-    await runAllocationCycle(agentId).catch(console.error);
-  }, 6 * 60 * 60_000); // every 6 hours
+  await runCycleAndSave().catch(console.error);
 
+  const interval = setInterval(() => runCycleAndSave().catch(console.error), 6 * 60 * 60_000);
   runningAllocationAgents.set(agentId, interval);
 }
 

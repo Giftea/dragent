@@ -102,6 +102,7 @@ export default function DashboardPage() {
   const [acting, setActing] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState(false);
   const [arbActive, setArbActive] = useState(false);
+  const [filter, setFilter] = useState<"all" | "signal" | "arb" | "allocation">("all");
 
   // Find agent by wallet
   useEffect(() => {
@@ -129,6 +130,13 @@ export default function DashboardPage() {
       return getAgentTradesByAddresses([agent.wallet, DEPLOYER], 20);
     },
     enabled: !!agent?.wallet,
+    refetchInterval: 30_000,
+  });
+
+  const { data: dbTrades } = useQuery({
+    queryKey: ["db-trades-main", agentId],
+    queryFn: () => getDbTrades(agentId!),
+    enabled: !!agentId,
     refetchInterval: 30_000,
   });
 
@@ -232,6 +240,23 @@ export default function DashboardPage() {
   }
 
   const tier = onChainRep?.tier ?? 0;
+
+  const filteredTrades = onChainTrades.filter((trade: OnChainTrade) => {
+    if (filter === "all") return true;
+    if (filter === "allocation") return trade.asset.includes("-");
+    const dbTrade = (dbTrades as { reason_hash: string; reason: string }[] | undefined)
+      ?.find(t => t.reason_hash === trade.reasonHash);
+    if (filter === "arb") {
+      return dbTrade?.reason?.toLowerCase().includes("cross-chain") ||
+        dbTrade?.reason?.toLowerCase().includes("avalanche") ||
+        false;
+    }
+    // signal: simple ticker asset, reason is NOT cross-chain/avalanche
+    return ["ETH", "BTC", "SOL", "AVAX", "BNB", "ARB"].includes(trade.asset) &&
+      !trade.asset.includes("-") &&
+      !dbTrade?.reason?.toLowerCase().includes("cross-chain") &&
+      !dbTrade?.reason?.toLowerCase().includes("avalanche");
+  });
   const winRate = onChainRep ? formatWinRate(onChainRep.winRateBps) : "—";
   const drawdown = onChainRep ? formatDrawdown(onChainRep.maxDrawdownBps) : "—";
   const budget =
@@ -374,7 +399,31 @@ export default function DashboardPage() {
         {/* Trade feed */}
         <div>
           <h2 className="text-lg font-medium mb-4">Decision feed</h2>
-          {onChainTrades.length === 0 ? (
+
+          {/* Filter tabs */}
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm text-zinc-500 mr-2">Filter:</span>
+            {(["all", "signal", "arb", "allocation"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                style={{
+                  padding:       "4px 12px",
+                  borderRadius:  "99px",
+                  border:        `1px solid ${filter === f ? "white" : "#3f3f46"}`,
+                  background:    filter === f ? "white" : "transparent",
+                  color:         filter === f ? "black" : "#a1a1aa",
+                  fontSize:      "12px",
+                  cursor:        "pointer",
+                  textTransform: "capitalize",
+                }}
+              >
+                {f === "all" ? "All decisions" : f === "signal" ? "📈 Signals" : f === "arb" ? "🔀 Arb" : "📊 Allocation"}
+              </button>
+            ))}
+          </div>
+
+          {filteredTrades.length === 0 ? (
             <Card className="bg-zinc-900 border-zinc-800">
               <CardContent className="flex flex-col items-center gap-3 py-16">
                 <p className="text-zinc-400 text-sm">No decisions yet.</p>
@@ -386,21 +435,33 @@ export default function DashboardPage() {
             </Card>
           ) : (
             <div className="flex flex-col gap-3">
-              {onChainTrades.map((trade: OnChainTrade) => (
+              {filteredTrades.map((trade: OnChainTrade) => {
+                const dbTrade = (dbTrades as { reason_hash: string; reason: string }[] | undefined)
+                  ?.find(t => t.reason_hash === trade.reasonHash);
+                const isArb        = dbTrade?.reason?.toLowerCase().includes("cross-chain") ||
+                                     dbTrade?.reason?.toLowerCase().includes("avalanche");
+                const isAllocation = trade.asset.includes("-");
+                const badgeLabel   = isAllocation
+                  ? "📊 ALLOCATE"
+                  : isArb
+                    ? "🔀 ARB SCAN"
+                    : trade.direction === "BUY"
+                      ? "↑ BUY SIGNAL"
+                      : "↓ SELL SIGNAL";
+                const badgeClass = isAllocation
+                  ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                  : isArb
+                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                    : trade.direction === "BUY"
+                      ? "bg-green-500/10 text-green-400 border-green-500/20"
+                      : "bg-red-500/10 text-red-400 border-red-500/20";
+                return (
                 <Card key={trade.id} className="bg-zinc-900 border-zinc-800">
                   <CardContent className="py-4 px-5">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <Badge
-                          className={
-                            trade.direction === "BUY"
-                              ? "bg-green-500/10 text-green-400 border-green-500/20"
-                              : "bg-red-500/10 text-red-400 border-red-500/20"
-                          }
-                        >
-                          {trade.direction === "BUY"
-                            ? "↑ BUY SIGNAL"
-                            : "↓ SELL SIGNAL"}
+                        <Badge className={badgeClass}>
+                          {badgeLabel}
                         </Badge>
                         <span className="text-white font-medium">
                           {trade.asset}
@@ -443,7 +504,8 @@ export default function DashboardPage() {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -22,11 +22,16 @@ export interface AllocationDecision {
 const DEFI_LLAMA_YIELDS  = "https://yields.llama.fi/pools";
 
 const TRACKED_PROTOCOLS = [
-  "aave-v3",
-  "compound-v3",
-  "morpho-blue",
+  "aave",
+  "compound",
+  "morpho",
   "spark",
   "fluid",
+  "maker",
+  "curve",
+  "euler",
+  "venus",
+  "benqi",
 ];
 
 const TRACKED_CHAINS = ["Ethereum", "Avalanche", "Base", "Arbitrum"];
@@ -48,14 +53,15 @@ export async function fetchProtocolYields(): Promise<ProtocolYield[]> {
     return pools
       .filter(p =>
         TRACKED_PROTOCOLS.some(proto =>
-          p.project.toLowerCase().includes(proto.split("-")[0])
+          p.project.toLowerCase().includes(proto)
         ) &&
         TRACKED_CHAINS.includes(p.chain) &&
         TRACKED_ASSETS.some(asset =>
           p.symbol.toUpperCase().includes(asset)
         ) &&
         p.apy > 0 &&
-        p.tvlUsd > 1_000_000
+        p.apy < 100 &&
+        p.tvlUsd > 5_000_000
       )
       .map(p => ({
         protocol:  p.project,
