@@ -204,18 +204,56 @@ export default function DashboardPage() {
   // No agent found
   if (notFound) {
     return (
-      <main className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="flex flex-col items-center gap-6 text-center">
-          <p className="text-white text-lg font-medium">No agent found</p>
-          <p className="text-zinc-400 text-sm max-w-sm">
-            You haven't deployed a Dragent agent yet.
-          </p>
+      <main className="min-h-screen bg-black text-white">
+        <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
+          <a href="/" className="text-lg font-semibold tracking-tight">Dragent</a>
+          <appkit-account-button />
+        </nav>
+
+        <div className="max-w-2xl mx-auto px-6 py-32 flex flex-col items-center text-center gap-8">
+          <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-4xl">
+            🐉
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <h1 className="text-2xl font-semibold text-white">
+              No agent deployed yet
+            </h1>
+            <p className="text-zinc-400 text-sm max-w-sm leading-relaxed">
+              Deploy your first Dragent agent to start monitoring markets,
+              scanning cross-chain opportunities, and tracking DeFi yields —
+              all with verifiable on-chain reasoning.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 w-full max-w-lg">
+            {[
+              { icon: "📈", label: "Signal Agent",      desc: "RSI + trend monitoring" },
+              { icon: "🔀", label: "Arb Scanner",       desc: "Cross-chain spreads" },
+              { icon: "📊", label: "Capital Allocator", desc: "DeFi yield tracking" },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 flex flex-col items-center gap-2 text-center"
+              >
+                <span className="text-2xl">{item.icon}</span>
+                <p className="text-white text-xs font-medium">{item.label}</p>
+                <p className="text-zinc-500 text-xs">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
           <Button
-            className="bg-white text-black hover:bg-zinc-200"
+            className="bg-white text-black hover:bg-zinc-200 px-8"
+            size="lg"
             onClick={() => router.push("/launch")}
           >
             Deploy your agent →
           </Button>
+
+          <p className="text-zinc-600 text-xs">
+            Your vault is deployed on Kite chain. Every decision is proven on-chain.
+          </p>
         </div>
       </main>
     );
