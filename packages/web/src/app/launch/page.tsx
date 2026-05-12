@@ -153,7 +153,7 @@ export default function LaunchPage() {
     : ["connect", "configure", "deploying", "done"];
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen text-white" style={{ background: "radial-gradient(ellipse 80% 40% at 60% -10%, rgba(109,40,217,0.15) 0%, transparent 70%), #000" }}>
       <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
         <a href="/" className="text-lg font-semibold tracking-tight">Dragent</a>
         <appkit-button />

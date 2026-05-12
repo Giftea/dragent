@@ -32,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import EditStrategyModal from "@/components/EditStrategyModal";
 import PnLChart from "@/components/PnLChart";
+import AccuracyChart from "@/components/AccuracyChart";
 
 const TIER_LABELS = ["Sandbox", "Apprentice", "Trader", "Expert"];
 const TIER_COLORS = [
@@ -333,7 +334,7 @@ export default function DashboardPage() {
     (Number(agent.chainStats?.budgetLimit ?? 50000000) / 1e6).toLocaleString();
 
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen text-white" style={{ background: "radial-gradient(ellipse 80% 40% at 60% -10%, rgba(109,40,217,0.15) 0%, transparent 70%), #000" }}>
       <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
         <a href="/" className="text-lg font-semibold tracking-tight">
           Dragent
@@ -470,6 +471,9 @@ export default function DashboardPage() {
 
         {/* PnL Chart */}
         {agentId && <PnLChart agentId={agentId} />}
+
+        {/* Accuracy chart */}
+        {agentId && <AccuracyChart agentId={agentId} />}
 
         <Separator className="bg-zinc-800" />
 

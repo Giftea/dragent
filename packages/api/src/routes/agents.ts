@@ -343,21 +343,31 @@ router.get("/:id/pnl", async (req, res) => {
     );
 
     let cumulative = 0;
+    let wins       = 0;
+
     const series = result.rows.map((row: {
       created_at: string;
       pnl_bps:    number;
       won:        boolean;
       asset:      string;
       direction:  string;
-    }) => {
+    }, i: number) => {
       cumulative += row.pnl_bps;
+      if (row.won) wins++;
+
+      const total         = i + 1;
+      const rollingWinPct = Math.round((wins / total) * 1000) / 10;
+
       return {
-        timestamp:      row.created_at,
-        pnl_bps:        row.pnl_bps,
-        cumulative_bps: cumulative,
-        won:            row.won,
-        asset:          row.asset,
-        direction:      row.direction,
+        timestamp:       row.created_at,
+        pnl_bps:         row.pnl_bps,
+        cumulative_bps:  cumulative,
+        won:             row.won,
+        asset:           row.asset,
+        direction:       row.direction,
+        decision:        total,
+        rolling_win_pct: rollingWinPct,
+        wins_so_far:     wins,
       };
     });
 
