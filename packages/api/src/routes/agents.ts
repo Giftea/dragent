@@ -323,6 +323,61 @@ router.post("/:id/allocation/stop", async (req, res) => {
   }
 });
 
+// GET /api/agents/:id/pnl
+router.get("/:id/pnl", async (req, res) => {
+  try {
+    const agentId = parseInt(req.params.id);
+
+    const result = await query(
+      `SELECT
+         created_at,
+         pnl_bps,
+         won,
+         asset,
+         direction
+       FROM trades
+       WHERE agent_id = $1
+         AND pnl_bps IS NOT NULL
+       ORDER BY created_at ASC`,
+      [agentId]
+    );
+
+    let cumulative = 0;
+    const series = result.rows.map((row: {
+      created_at: string;
+      pnl_bps:    number;
+      won:        boolean;
+      asset:      string;
+      direction:  string;
+    }) => {
+      cumulative += row.pnl_bps;
+      return {
+        timestamp:      row.created_at,
+        pnl_bps:        row.pnl_bps,
+        cumulative_bps: cumulative,
+        won:            row.won,
+        asset:          row.asset,
+        direction:      row.direction,
+      };
+    });
+
+    return res.json({
+      series,
+      summary: {
+        totalDecisions: result.rows.length,
+        wins:           result.rows.filter((r: { won: boolean }) => r.won).length,
+        losses:         result.rows.filter((r: { won: boolean }) => !r.won).length,
+        totalPnlBps:    cumulative,
+        totalPnlPct:    (cumulative / 100).toFixed(2),
+      }
+    });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch PnL data" });
+  }
+});
+
 // GET /api/agents/:id/allocation/yields
 router.get("/:id/allocation/yields", async (_req, res) => {
   try {

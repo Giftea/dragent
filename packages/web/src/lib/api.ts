@@ -66,6 +66,11 @@ export async function stopAllocationAgent(agentId: number) {
   return res.data;
 }
 
+export async function getAgentPnL(agentId: number) {
+  const res = await api.get(`/api/agents/${agentId}/pnl`);
+  return res.data;
+}
+
 export async function updateStrategy(
   agentId: number,
   strategy: string,

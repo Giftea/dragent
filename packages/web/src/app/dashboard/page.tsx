@@ -31,6 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import EditStrategyModal from "@/components/EditStrategyModal";
+import PnLChart from "@/components/PnLChart";
 
 const TIER_LABELS = ["Sandbox", "Apprentice", "Trader", "Expert"];
 const TIER_COLORS = [
@@ -466,6 +467,9 @@ export default function DashboardPage() {
             sub="All time"
           />
         </div>
+
+        {/* PnL Chart */}
+        {agentId && <PnLChart agentId={agentId} />}
 
         <Separator className="bg-zinc-800" />
 
