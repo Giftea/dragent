@@ -41,24 +41,40 @@ export async function deployUserVault(
   maxDailySpendUSDC  = 100 * 1e6,
   cooldownSeconds    = 3600
 ): Promise<string> {
-  const tx = await factory.createVault(
-    agentWallet,
-    maxDrawdownBps,
-    maxPositionSizeBps,
-    BigInt(maxDailySpendUSDC),
-    cooldownSeconds
-  );
-  const receipt = await tx.wait();
+  try {
+    const tx = await factory.createVault(
+      agentWallet,
+      maxDrawdownBps,
+      maxPositionSizeBps,
+      BigInt(maxDailySpendUSDC),
+      cooldownSeconds
+    );
+    const receipt = await tx.wait();
 
-  // Parse VaultCreated event to get vault address
-  const event = receipt.logs
-    .map((log: { topics: string[]; data: string }) => {
-      try { return factory.interface.parseLog(log); }
-      catch { return null; }
-    })
-    .find((e: { name: string } | null) => e?.name === "VaultCreated");
+    const event = receipt.logs
+      .map((log: { topics: string[]; data: string }) => {
+        try { return factory.interface.parseLog(log); }
+        catch { return null; }
+      })
+      .find((e: { name: string } | null) => e?.name === "VaultCreated");
 
-  return event?.args?.vault;
+    return event?.args?.vault;
+
+  } catch (err: unknown) {
+    // If vault already exists, look it up from the factory
+    const reason = (err as { reason?: string }).reason;
+    if (reason === "Vault already exists") {
+      console.log("Vault already exists — looking up existing vault...");
+      const existingVault = await factory.getVault(
+        new ethers.Wallet(process.env.PRIVATE_KEY!).address
+      );
+      if (existingVault && existingVault !== ethers.ZeroAddress) {
+        console.log("Found existing vault:", existingVault);
+        return existingVault;
+      }
+    }
+    throw err;
+  }
 }
 
 // Get on-chain stats for an agent

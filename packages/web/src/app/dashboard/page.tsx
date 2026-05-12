@@ -12,6 +12,8 @@ import {
   stopAgent,
   startArbAgent,
   stopArbAgent,
+  startAllocationAgent,
+  stopAllocationAgent,
 } from "@/lib/api";
 import {
   getAgentTradesByAddresses,
@@ -101,7 +103,8 @@ export default function DashboardPage() {
   const [notFound, setNotFound] = useState(false);
   const [acting, setActing] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState(false);
-  const [arbActive, setArbActive] = useState(false);
+  const [arbActive,        setArbActive]        = useState(false);
+  const [allocationActive, setAllocationActive] = useState(false);
   const [filter, setFilter] = useState<"all" | "signal" | "arb" | "allocation">("all");
 
   // Find agent by wallet
@@ -123,6 +126,14 @@ export default function DashboardPage() {
     refetchInterval: 30_000,
   });
 
+  // Initialize toggle states from agent modes
+  useEffect(() => {
+    if (agent?.agent_modes) {
+      setArbActive(agent.agent_modes.arb ?? false);
+      setAllocationActive(agent.agent_modes.allocation ?? false);
+    }
+  }, [agent]);
+
   const { data: onChainTrades = [] } = useQuery({
     queryKey: ["goldsky-trades", agentId],
     queryFn: async () => {
@@ -141,12 +152,14 @@ export default function DashboardPage() {
   });
 
   const { data: onChainRep } = useQuery({
-    queryKey: ["goldsky-rep", agentId],
-    queryFn: async () => {
+    queryKey:        ["goldsky-rep", agentId],
+    queryFn:         async () => {
       if (!agent?.wallet) return null;
-      return getAgentReputation(agent.wallet);
+      const rep = await getAgentReputation(agent.wallet);
+      if (rep && Number(rep.totalTrades) > 0) return rep;
+      return getAgentReputation(DEPLOYER);
     },
-    enabled: !!agent?.wallet,
+    enabled:         !!agent?.wallet,
     refetchInterval: 30_000,
   });
 
@@ -164,6 +177,23 @@ export default function DashboardPage() {
       }
     } catch {
       toast({ title: "Failed to toggle arb scanner", variant: "destructive" });
+    }
+  };
+
+  const handleAllocationToggle = async () => {
+    if (!agentId) return;
+    try {
+      if (allocationActive) {
+        await stopAllocationAgent(agentId);
+        setAllocationActive(false);
+        toast({ title: "Capital allocator stopped" });
+      } else {
+        await startAllocationAgent(agentId);
+        setAllocationActive(true);
+        toast({ title: "Capital allocator active" });
+      }
+    } catch {
+      toast({ title: "Failed to toggle allocator", variant: "destructive" });
     }
   };
 
@@ -317,10 +347,9 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="outline"
-            className={
-              arbActive
-                ? "border-purple-700 text-purple-400"
-                : "border-zinc-700 text-zinc-400"
+            className={arbActive
+              ? "border-blue-700 text-blue-400"
+              : "border-zinc-700 text-zinc-400"
             }
             onClick={handleArbToggle}
           >
@@ -328,20 +357,26 @@ export default function DashboardPage() {
           </Button>
           <Button
             size="sm"
+            variant="outline"
+            className={allocationActive
+              ? "border-purple-700 text-purple-400"
+              : "border-zinc-700 text-zinc-400"
+            }
+            onClick={handleAllocationToggle}
+          >
+            {allocationActive ? "📊 Alloc active" : "📊 Start alloc"}
+          </Button>
+          <Button
+            size="sm"
             variant={agent.status === "active" ? "outline" : "default"}
-            className={
-              agent.status === "active"
-                ? "border-zinc-700 text-zinc-300"
-                : "bg-white text-black hover:bg-zinc-200"
+            className={agent.status === "active"
+              ? "border-zinc-700 text-zinc-300"
+              : "bg-white text-black hover:bg-zinc-200"
             }
             onClick={handleToggle}
             disabled={acting}
           >
-            {acting
-              ? "..."
-              : agent.status === "active"
-              ? "Pause agent"
-              : "Start agent"}
+            {acting ? "..." : agent.status === "active" ? "Pause agent" : "Start agent"}
           </Button>
         </div>
       </nav>

@@ -203,6 +203,72 @@ Return ONLY valid JSON, no explanation, no markdown:
   },
 );
 
+// POST /api/strategy/parse/internal — no payment required (for app UI)
+router.post("/parse/internal", async (req, res) => {
+  try {
+    const { strategy } = req.body;
+    if (!strategy) return res.status(400).json({ error: "strategy required" });
+
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const message = await anthropic.messages.create({
+          model:      "claude-sonnet-4-20250514",
+          max_tokens: 1024,
+          messages: [{
+            role: "user",
+            content: `You are a trading strategy parser. Convert this natural language trading strategy into a structured JSON object.
+
+Strategy: "${strategy}"
+
+Supported assets: ETH, BTC, SOL, AVAX, BNB, ARB
+
+Return ONLY valid JSON, no explanation, no markdown:
+{
+  "entryConditions": {
+    "rsiBelow": <number or null>,
+    "rsiAbove": <number or null>,
+    "priceChangePct": <number or null>,
+    "trendRequired": <"bullish"|"bearish"|"neutral"|null>,
+    "minConfidence": <number 0-100>
+  },
+  "riskRules": {
+    "maxRiskPctPerTrade": <number, default 2>,
+    "maxDrawdownPct": <number, default 10>,
+    "stopLossPct": <number, default 5>,
+    "takeProfitPct": <number, default 10>
+  },
+  "assets": [<array of symbols from supported assets list>],
+  "direction": <"long"|"short"|"both">
+}`
+          }]
+        });
+
+        const raw   = (message.content[0] as { text: string }).text.trim();
+        const rules = JSON.parse(raw);
+        return res.json({ rules });
+
+      } catch (err: unknown) {
+        lastError    = err;
+        const status = (err as { status?: number }).status;
+        if (status === 529) {
+          console.warn(`⚠️  Anthropic overloaded, retry ${attempt}/3...`);
+          await new Promise(r => setTimeout(r, 2000 * attempt));
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw lastError;
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to parse strategy. Try again shortly." });
+  }
+});
+
 // POST /api/reason/generate — 0.05 PYUSD
 router.post(
   "/reason/generate",

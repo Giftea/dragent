@@ -7,7 +7,7 @@ export const api = axios.create({
 
 // ── Strategy ──────────────────────────────────────────────
 export async function parseStrategy(strategy: string) {
-  const res = await api.post("/api/strategy/parse", { strategy });
+  const res = await api.post("/api/strategy/parse/internal", { strategy });
   return res.data.rules;
 }
 
@@ -53,6 +53,16 @@ export async function startArbAgent(agentId: number) {
 
 export async function stopArbAgent(agentId: number) {
   const res = await api.post(`/api/agents/${agentId}/arb/stop`);
+  return res.data;
+}
+
+export async function startAllocationAgent(agentId: number) {
+  const res = await api.post(`/api/agents/${agentId}/allocation/start`);
+  return res.data;
+}
+
+export async function stopAllocationAgent(agentId: number) {
+  const res = await api.post(`/api/agents/${agentId}/allocation/stop`);
   return res.data;
 }
 
