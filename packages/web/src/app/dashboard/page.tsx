@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import EditStrategyModal from "@/components/EditStrategyModal";
 import PnLChart from "@/components/PnLChart";
 import AccuracyChart from "@/components/AccuracyChart";
+import PortfolioOverview from "@/components/PortfolioOverview";
 
 const TIER_LABELS = ["Sandbox", "Apprentice", "Trader", "Expert"];
 const TIER_COLORS = [
@@ -452,9 +453,7 @@ export default function DashboardPage() {
           <StatCard
             label="Win rate"
             value={winRate}
-            sub={`${onChainRep?.winCount ?? 0} of ${
-              onChainRep?.totalTrades ?? 0
-            } trades`}
+            sub={`${onChainRep?.winCount ?? 0} of ${onChainRep?.totalTrades ?? 0} settled`}
           />
           <StatCard label="Max drawdown" value={drawdown} />
           <StatCard
@@ -463,9 +462,9 @@ export default function DashboardPage() {
             sub={`Tier ${tier} — ${TIER_LABELS[tier]}`}
           />
           <StatCard
-            label="Total trades"
+            label="Total decisions"
             value={String(onChainRep?.totalTrades ?? 0)}
-            sub="All time"
+            sub="All time · all types"
           />
         </div>
 
@@ -474,6 +473,9 @@ export default function DashboardPage() {
 
         {/* Accuracy chart */}
         {agentId && <AccuracyChart agentId={agentId} />}
+
+        {/* Portfolio overview */}
+        {agentId && <PortfolioOverview agentId={agentId} />}
 
         <Separator className="bg-zinc-800" />
 

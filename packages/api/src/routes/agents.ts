@@ -7,7 +7,7 @@ import {
   reputationRegistry,
 } from "../services/contractService";
 import { startAgent, stopAgent, startArbAgent, stopArbAgent, startAllocationAgent, stopAllocationAgent } from "../agents/agentRunner";
-import { fetchProtocolYields } from "@dragent/core";
+import { fetchProtocolYields, findBestYield } from "@dragent/core";
 import { ethers } from "ethers";
 import { getAAWalletAddress, getAAWalletBalance } from "../services/aaService";
 import { requirePayment } from "../middleware/x402";
@@ -396,6 +396,108 @@ router.get("/:id/allocation/yields", async (_req, res) => {
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch yields" });
+  }
+});
+
+// GET /api/agents/:id/portfolio
+router.get("/:id/portfolio", async (req, res) => {
+  try {
+    const agentId = parseInt(req.params.id);
+
+    const agentRes = await query("SELECT * FROM agents WHERE id = $1", [agentId]);
+    if (agentRes.rows.length === 0) {
+      return res.status(404).json({ error: "Agent not found" });
+    }
+    const agent = agentRes.rows[0];
+
+    const [allocationRes, arbRes, settledRes] = await Promise.all([
+      query(
+        `SELECT asset, price_usd, reason, created_at
+         FROM trades
+         WHERE agent_id = $1 AND asset LIKE '%-%-'
+         ORDER BY created_at DESC LIMIT 1`,
+        [agentId]
+      ),
+      query(
+        `SELECT asset, price_usd, reason, created_at
+         FROM trades
+         WHERE agent_id = $1 AND reason LIKE '%cross-chain%'
+         ORDER BY created_at DESC LIMIT 3`,
+        [agentId]
+      ),
+      query(
+        `SELECT
+           COUNT(*) as total,
+           SUM(CASE WHEN won = true THEN 1 ELSE 0 END) as wins,
+           SUM(CASE WHEN won = false THEN 1 ELSE 0 END) as losses,
+           SUM(pnl_bps) as total_pnl_bps
+         FROM trades
+         WHERE agent_id = $1 AND won IS NOT NULL`,
+        [agentId]
+      ),
+    ]);
+
+    const settled = settledRes.rows[0];
+
+    let currentYield = null;
+    try {
+      const yields = await fetchProtocolYields();
+      currentYield = findBestYield(yields, "medium", "USDC");
+    } catch {
+      // yields unavailable
+    }
+
+    const budgetLimit = Number(agent.chainStats?.budgetLimit ?? 50000000) / 1e6;
+    const modes = agent.agent_modes ?? {};
+
+    const portfolio = {
+      totalBudget: budgetLimit,
+      allocated:   modes.allocation ? Math.min(100, budgetLimit) : 0,
+      monitoring:  modes.signal ? budgetLimit * 0.1 : 0,
+      idle:        budgetLimit - (modes.allocation ? 100 : 0),
+      currency:    "USDC",
+
+      agents: {
+        signal: {
+          active:    modes.signal ?? false,
+          assets:    agent.rules?.assets ?? [],
+          decisions: Number(settled.total ?? 0),
+          winRate:   settled.total > 0
+            ? Math.round((settled.wins / settled.total) * 1000) / 10
+            : 0,
+        },
+        arb: {
+          active:          modes.arb ?? false,
+          lastScan:        arbRes.rows[0]?.created_at ?? null,
+          assetsMonitored: ["ETH", "BTC", "AVAX"],
+          scansTotal:      arbRes.rows.length,
+        },
+        allocation: {
+          active:          modes.allocation ?? false,
+          currentProtocol: allocationRes.rows[0]?.asset ?? null,
+          currentApy:      allocationRes.rows[0]?.price_usd
+            ? Number(allocationRes.rows[0].price_usd) / 1e8
+            : null,
+          lastUpdated:     allocationRes.rows[0]?.created_at ?? null,
+          liveApy:         currentYield?.apy ?? null,
+          liveProtocol:    currentYield
+            ? `${currentYield.protocol} (${currentYield.chain})`
+            : null,
+        },
+      },
+
+      performance: {
+        totalDecisions: Number(settled.total ?? 0),
+        wins:           Number(settled.wins ?? 0),
+        losses:         Number(settled.losses ?? 0),
+        totalPnlBps:    Number(settled.total_pnl_bps ?? 0),
+      },
+    };
+
+    return res.json(portfolio);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Failed to fetch portfolio" });
   }
 });
 

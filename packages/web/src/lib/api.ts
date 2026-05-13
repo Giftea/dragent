@@ -71,6 +71,11 @@ export async function getAgentPnL(agentId: number) {
   return res.data;
 }
 
+export async function getAgentPortfolio(agentId: number) {
+  const res = await api.get(`/api/agents/${agentId}/portfolio`);
+  return res.data;
+}
+
 export async function updateStrategy(
   agentId: number,
   strategy: string,
