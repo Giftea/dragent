@@ -38,7 +38,10 @@ Write ONE sentence starting with "Allocating". Cite the protocol, APY, and why i
     }],
   });
 
-  return (message.content[0] as { text: string }).text.trim();
+  return (message.content[0] as { text: string }).text
+    .trim()
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "");
 }
 
 export async function analyzeAllocation(

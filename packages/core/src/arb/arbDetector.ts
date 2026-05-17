@@ -83,5 +83,8 @@ Write ONE sentence starting with "${opp.profitable ? "Cross-chain arb opportunit
     }],
   });
 
-  return (message.content[0] as { text: string }).text.trim();
+  return (message.content[0] as { text: string }).text
+    .trim()
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "");
 }

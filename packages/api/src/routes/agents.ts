@@ -6,7 +6,14 @@ import {
   getRecentTrades,
   reputationRegistry,
 } from "../services/contractService";
-import { startAgent, stopAgent, startArbAgent, stopArbAgent, startAllocationAgent, stopAllocationAgent } from "../agents/agentRunner";
+import {
+  startAgent,
+  stopAgent,
+  startArbAgent,
+  stopArbAgent,
+  startAllocationAgent,
+  stopAllocationAgent,
+} from "../agents/agentRunner";
 import { fetchProtocolYields, findBestYield } from "@dragent/core";
 import { ethers } from "ethers";
 import { getAAWalletAddress, getAAWalletBalance } from "../services/aaService";
@@ -159,7 +166,14 @@ router.get("/:id/trades", async (req, res) => {
   try {
     const agentId = parseInt(req.params.id);
     const trades = await query(
-      "SELECT * FROM trades WHERE agent_id = $1 ORDER BY created_at DESC LIMIT 50",
+      `SELECT
+         trade_id, asset, direction, size_usdc,
+         price_usd, reason, reason_hash, tx_hash,
+         won, pnl_bps, created_at
+       FROM trades
+       WHERE agent_id = $1
+       ORDER BY created_at DESC
+       LIMIT 50`,
       [agentId],
     );
     return res.json(trades.rows);
@@ -339,49 +353,53 @@ router.get("/:id/pnl", async (req, res) => {
        WHERE agent_id = $1
          AND pnl_bps IS NOT NULL
        ORDER BY created_at ASC`,
-      [agentId]
+      [agentId],
     );
 
     let cumulative = 0;
-    let wins       = 0;
+    let wins = 0;
 
-    const series = result.rows.map((row: {
-      created_at: string;
-      pnl_bps:    number;
-      won:        boolean;
-      asset:      string;
-      direction:  string;
-    }, i: number) => {
-      cumulative += row.pnl_bps;
-      if (row.won) wins++;
+    const series = result.rows.map(
+      (
+        row: {
+          created_at: string;
+          pnl_bps: number;
+          won: boolean;
+          asset: string;
+          direction: string;
+        },
+        i: number,
+      ) => {
+        cumulative += row.pnl_bps;
+        if (row.won) wins++;
 
-      const total         = i + 1;
-      const rollingWinPct = Math.round((wins / total) * 1000) / 10;
+        const total = i + 1;
+        const rollingWinPct = Math.round((wins / total) * 1000) / 10;
 
-      return {
-        timestamp:       row.created_at,
-        pnl_bps:         row.pnl_bps,
-        cumulative_bps:  cumulative,
-        won:             row.won,
-        asset:           row.asset,
-        direction:       row.direction,
-        decision:        total,
-        rolling_win_pct: rollingWinPct,
-        wins_so_far:     wins,
-      };
-    });
+        return {
+          timestamp: row.created_at,
+          pnl_bps: row.pnl_bps,
+          cumulative_bps: cumulative,
+          won: row.won,
+          asset: row.asset,
+          direction: row.direction,
+          decision: total,
+          rolling_win_pct: rollingWinPct,
+          wins_so_far: wins,
+        };
+      },
+    );
 
     return res.json({
       series,
       summary: {
         totalDecisions: result.rows.length,
-        wins:           result.rows.filter((r: { won: boolean }) => r.won).length,
-        losses:         result.rows.filter((r: { won: boolean }) => !r.won).length,
-        totalPnlBps:    cumulative,
-        totalPnlPct:    (cumulative / 100).toFixed(2),
-      }
+        wins: result.rows.filter((r: { won: boolean }) => r.won).length,
+        losses: result.rows.filter((r: { won: boolean }) => !r.won).length,
+        totalPnlBps: cumulative,
+        totalPnlPct: (cumulative / 100).toFixed(2),
+      },
     });
-
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Failed to fetch PnL data" });
@@ -404,7 +422,9 @@ router.get("/:id/portfolio", async (req, res) => {
   try {
     const agentId = parseInt(req.params.id);
 
-    const agentRes = await query("SELECT * FROM agents WHERE id = $1", [agentId]);
+    const agentRes = await query("SELECT * FROM agents WHERE id = $1", [
+      agentId,
+    ]);
     if (agentRes.rows.length === 0) {
       return res.status(404).json({ error: "Agent not found" });
     }
@@ -416,14 +436,14 @@ router.get("/:id/portfolio", async (req, res) => {
          FROM trades
          WHERE agent_id = $1 AND asset LIKE '%-%-'
          ORDER BY created_at DESC LIMIT 1`,
-        [agentId]
+        [agentId],
       ),
       query(
         `SELECT asset, price_usd, reason, created_at
          FROM trades
          WHERE agent_id = $1 AND reason LIKE '%cross-chain%'
          ORDER BY created_at DESC LIMIT 3`,
-        [agentId]
+        [agentId],
       ),
       query(
         `SELECT
@@ -433,7 +453,7 @@ router.get("/:id/portfolio", async (req, res) => {
            SUM(pnl_bps) as total_pnl_bps
          FROM trades
          WHERE agent_id = $1 AND won IS NOT NULL`,
-        [agentId]
+        [agentId],
       ),
     ]);
 
@@ -452,35 +472,36 @@ router.get("/:id/portfolio", async (req, res) => {
 
     const portfolio = {
       totalBudget: budgetLimit,
-      allocated:   modes.allocation ? Math.min(100, budgetLimit) : 0,
-      monitoring:  modes.signal ? budgetLimit * 0.1 : 0,
-      idle:        budgetLimit - (modes.allocation ? 100 : 0),
-      currency:    "USDC",
+      allocated: modes.allocation ? Math.min(100, budgetLimit) : 0,
+      monitoring: modes.signal ? budgetLimit * 0.1 : 0,
+      idle: budgetLimit - (modes.allocation ? 100 : 0),
+      currency: "USDC",
 
       agents: {
         signal: {
-          active:    modes.signal ?? false,
-          assets:    agent.rules?.assets ?? [],
+          active: modes.signal ?? false,
+          assets: agent.rules?.assets ?? [],
           decisions: Number(settled.total ?? 0),
-          winRate:   settled.total > 0
-            ? Math.round((settled.wins / settled.total) * 1000) / 10
-            : 0,
+          winRate:
+            settled.total > 0
+              ? Math.round((settled.wins / settled.total) * 1000) / 10
+              : 0,
         },
         arb: {
-          active:          modes.arb ?? false,
-          lastScan:        arbRes.rows[0]?.created_at ?? null,
+          active: modes.arb ?? false,
+          lastScan: arbRes.rows[0]?.created_at ?? null,
           assetsMonitored: ["ETH", "BTC", "AVAX"],
-          scansTotal:      arbRes.rows.length,
+          scansTotal: arbRes.rows.length,
         },
         allocation: {
-          active:          modes.allocation ?? false,
+          active: modes.allocation ?? false,
           currentProtocol: allocationRes.rows[0]?.asset ?? null,
-          currentApy:      allocationRes.rows[0]?.price_usd
+          currentApy: allocationRes.rows[0]?.price_usd
             ? Number(allocationRes.rows[0].price_usd) / 1e8
             : null,
-          lastUpdated:     allocationRes.rows[0]?.created_at ?? null,
-          liveApy:         currentYield?.apy ?? null,
-          liveProtocol:    currentYield
+          lastUpdated: allocationRes.rows[0]?.created_at ?? null,
+          liveApy: currentYield?.apy ?? null,
+          liveProtocol: currentYield
             ? `${currentYield.protocol} (${currentYield.chain})`
             : null,
         },
@@ -488,9 +509,9 @@ router.get("/:id/portfolio", async (req, res) => {
 
       performance: {
         totalDecisions: Number(settled.total ?? 0),
-        wins:           Number(settled.wins ?? 0),
-        losses:         Number(settled.losses ?? 0),
-        totalPnlBps:    Number(settled.total_pnl_bps ?? 0),
+        wins: Number(settled.wins ?? 0),
+        losses: Number(settled.losses ?? 0),
+        totalPnlBps: Number(settled.total_pnl_bps ?? 0),
       },
     };
 

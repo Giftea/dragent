@@ -80,6 +80,8 @@ function ReasonText({
       | {
           reason_hash: string;
           reason: string;
+          won: boolean | null;
+          pnl_bps: number | null;
         }[]
       | undefined
   )?.find((t) => t.reason_hash === reasonHash);
@@ -106,9 +108,11 @@ export default function DashboardPage() {
   const [notFound, setNotFound] = useState(false);
   const [acting, setActing] = useState(false);
   const [editingStrategy, setEditingStrategy] = useState(false);
-  const [arbActive,        setArbActive]        = useState(false);
+  const [arbActive, setArbActive] = useState(false);
   const [allocationActive, setAllocationActive] = useState(false);
-  const [filter, setFilter] = useState<"all" | "signal" | "arb" | "allocation">("all");
+  const [filter, setFilter] = useState<"all" | "signal" | "arb" | "allocation">(
+    "all",
+  );
 
   // Find agent by wallet
   useEffect(() => {
@@ -155,14 +159,14 @@ export default function DashboardPage() {
   });
 
   const { data: onChainRep } = useQuery({
-    queryKey:        ["goldsky-rep", agentId],
-    queryFn:         async () => {
+    queryKey: ["goldsky-rep", agentId],
+    queryFn: async () => {
       if (!agent?.wallet) return null;
       const rep = await getAgentReputation(agent.wallet);
       if (rep && Number(rep.totalTrades) > 0) return rep;
       return getAgentReputation(DEPLOYER);
     },
-    enabled:         !!agent?.wallet,
+    enabled: !!agent?.wallet,
     refetchInterval: 30_000,
   });
 
@@ -176,7 +180,10 @@ export default function DashboardPage() {
       } else {
         await startArbAgent(agentId);
         setArbActive(true);
-        toast({ title: "Arb scanner active — monitoring ETH, BTC, AVAX across Avalanche and Kite" });
+        toast({
+          title:
+            "Arb scanner active — monitoring ETH, BTC, AVAX across Avalanche and Kite",
+        });
       }
     } catch {
       toast({ title: "Failed to toggle arb scanner", variant: "destructive" });
@@ -239,7 +246,9 @@ export default function DashboardPage() {
     return (
       <main className="min-h-screen bg-black text-white">
         <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
-          <a href="/" className="text-lg font-semibold tracking-tight">Dragent</a>
+          <a href="/" className="text-lg font-semibold tracking-tight">
+            Dragent
+          </a>
           <appkit-account-button />
         </nav>
 
@@ -254,16 +263,24 @@ export default function DashboardPage() {
             </h1>
             <p className="text-zinc-400 text-sm max-w-sm leading-relaxed">
               Deploy your first Dragent agent to start monitoring markets,
-              scanning cross-chain opportunities, and tracking DeFi yields —
-              all with verifiable on-chain reasoning.
+              scanning cross-chain opportunities, and tracking DeFi yields — all
+              with verifiable on-chain reasoning.
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-4 w-full max-w-lg">
             {[
-              { icon: "📈", label: "Signal Agent",      desc: "RSI + trend monitoring" },
-              { icon: "🔀", label: "Arb Scanner",       desc: "Cross-chain spreads" },
-              { icon: "📊", label: "Capital Allocator", desc: "DeFi yield tracking" },
+              {
+                icon: "📈",
+                label: "Signal Agent",
+                desc: "RSI + trend monitoring",
+              },
+              { icon: "🔀", label: "Arb Scanner", desc: "Cross-chain spreads" },
+              {
+                icon: "📊",
+                label: "Capital Allocator",
+                desc: "DeFi yield tracking",
+              },
             ].map((item) => (
               <div
                 key={item.label}
@@ -285,7 +302,8 @@ export default function DashboardPage() {
           </Button>
 
           <p className="text-zinc-600 text-xs">
-            Your vault is deployed on Kite chain. Every decision is proven on-chain.
+            Your vault is deployed on Kite chain. Every decision is proven
+            on-chain.
           </p>
         </div>
       </main>
@@ -315,18 +333,23 @@ export default function DashboardPage() {
   const filteredTrades = onChainTrades.filter((trade: OnChainTrade) => {
     if (filter === "all") return true;
     if (filter === "allocation") return trade.asset.includes("-");
-    const dbTrade = (dbTrades as { reason_hash: string; reason: string }[] | undefined)
-      ?.find(t => t.reason_hash === trade.reasonHash);
+    const dbTrade = (
+      dbTrades as { reason_hash: string; reason: string }[] | undefined
+    )?.find((t) => t.reason_hash === trade.reasonHash);
     if (filter === "arb") {
-      return dbTrade?.reason?.toLowerCase().includes("cross-chain") ||
+      return (
+        dbTrade?.reason?.toLowerCase().includes("cross-chain") ||
         dbTrade?.reason?.toLowerCase().includes("avalanche") ||
-        false;
+        false
+      );
     }
     // signal: simple ticker asset, reason is NOT cross-chain/avalanche
-    return ["ETH", "BTC", "SOL", "AVAX", "BNB", "ARB"].includes(trade.asset) &&
+    return (
+      ["ETH", "BTC", "SOL", "AVAX", "BNB", "ARB"].includes(trade.asset) &&
       !trade.asset.includes("-") &&
       !dbTrade?.reason?.toLowerCase().includes("cross-chain") &&
-      !dbTrade?.reason?.toLowerCase().includes("avalanche");
+      !dbTrade?.reason?.toLowerCase().includes("avalanche")
+    );
   });
   const winRate = onChainRep ? formatWinRate(onChainRep.winRateBps) : "—";
   const drawdown = onChainRep ? formatDrawdown(onChainRep.maxDrawdownBps) : "—";
@@ -335,7 +358,13 @@ export default function DashboardPage() {
     (Number(agent.chainStats?.budgetLimit ?? 50000000) / 1e6).toLocaleString();
 
   return (
-    <main className="min-h-screen text-white" style={{ background: "radial-gradient(ellipse 80% 40% at 60% -10%, rgba(109,40,217,0.15) 0%, transparent 70%), #000" }}>
+    <main
+      className="min-h-screen text-white"
+      style={{
+        background:
+          "radial-gradient(ellipse 80% 40% at 60% -10%, rgba(109,40,217,0.15) 0%, transparent 70%), #000",
+      }}
+    >
       <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800">
         <a href="/" className="text-lg font-semibold tracking-tight">
           Dragent
@@ -350,9 +379,10 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="outline"
-            className={arbActive
-              ? "border-blue-700 text-blue-400"
-              : "border-zinc-700 text-zinc-400"
+            className={
+              arbActive
+                ? "border-blue-700 text-blue-400"
+                : "border-zinc-700 text-zinc-400"
             }
             onClick={handleArbToggle}
           >
@@ -361,9 +391,10 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant="outline"
-            className={allocationActive
-              ? "border-purple-700 text-purple-400"
-              : "border-zinc-700 text-zinc-400"
+            className={
+              allocationActive
+                ? "border-purple-700 text-purple-400"
+                : "border-zinc-700 text-zinc-400"
             }
             onClick={handleAllocationToggle}
           >
@@ -372,14 +403,19 @@ export default function DashboardPage() {
           <Button
             size="sm"
             variant={agent.status === "active" ? "outline" : "default"}
-            className={agent.status === "active"
-              ? "border-zinc-700 text-zinc-300"
-              : "bg-white text-black hover:bg-zinc-200"
+            className={
+              agent.status === "active"
+                ? "border-zinc-700 text-zinc-300"
+                : "bg-white text-black hover:bg-zinc-200"
             }
             onClick={handleToggle}
             disabled={acting}
           >
-            {acting ? "..." : agent.status === "active" ? "Pause agent" : "Start agent"}
+            {acting
+              ? "..."
+              : agent.status === "active"
+              ? "Pause agent"
+              : "Start agent"}
           </Button>
         </div>
       </nav>
@@ -453,7 +489,9 @@ export default function DashboardPage() {
           <StatCard
             label="Win rate"
             value={winRate}
-            sub={`${onChainRep?.winCount ?? 0} of ${onChainRep?.totalTrades ?? 0} settled`}
+            sub={`${onChainRep?.winCount ?? 0} of ${
+              onChainRep?.totalTrades ?? 0
+            } settled`}
           />
           <StatCard label="Max drawdown" value={drawdown} />
           <StatCard
@@ -491,17 +529,23 @@ export default function DashboardPage() {
                 key={f}
                 onClick={() => setFilter(f)}
                 style={{
-                  padding:       "4px 12px",
-                  borderRadius:  "99px",
-                  border:        `1px solid ${filter === f ? "white" : "#3f3f46"}`,
-                  background:    filter === f ? "white" : "transparent",
-                  color:         filter === f ? "black" : "#a1a1aa",
-                  fontSize:      "12px",
-                  cursor:        "pointer",
+                  padding: "4px 12px",
+                  borderRadius: "99px",
+                  border: `1px solid ${filter === f ? "white" : "#3f3f46"}`,
+                  background: filter === f ? "white" : "transparent",
+                  color: filter === f ? "black" : "#a1a1aa",
+                  fontSize: "12px",
+                  cursor: "pointer",
                   textTransform: "capitalize",
                 }}
               >
-                {f === "all" ? "All decisions" : f === "signal" ? "📈 Signals" : f === "arb" ? "🔀 Arb" : "📊 Allocation"}
+                {f === "all"
+                  ? "All decisions"
+                  : f === "signal"
+                  ? "📈 Signals"
+                  : f === "arb"
+                  ? "🔀 Arb"
+                  : "📊 Allocation"}
               </button>
             ))}
           </div>
@@ -519,74 +563,127 @@ export default function DashboardPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {filteredTrades.map((trade: OnChainTrade) => {
-                const dbTrade = (dbTrades as { reason_hash: string; reason: string }[] | undefined)
-                  ?.find(t => t.reason_hash === trade.reasonHash);
-                const isArb        = dbTrade?.reason?.toLowerCase().includes("cross-chain") ||
-                                     dbTrade?.reason?.toLowerCase().includes("avalanche");
+                const dbTrade = (
+                  dbTrades as
+                    | {
+                        reason_hash: string;
+                        reason: string;
+                        won: boolean | null;
+                        pnl_bps: number | null;
+                      }[]
+                    | undefined
+                )?.find((t) => t.reason_hash === trade.reasonHash);
+
+                const isArb =
+                  dbTrade?.reason?.toLowerCase().includes("cross-chain") ||
+                  dbTrade?.reason?.toLowerCase().includes("avalanche");
                 const isAllocation = trade.asset.includes("-");
-                const badgeLabel   = isAllocation
+                const isSettled =
+                  dbTrade?.won !== null && dbTrade?.won !== undefined;
+
+                const badgeLabel = isAllocation
                   ? "📊 ALLOCATE"
                   : isArb
-                    ? "🔀 ARB SCAN"
-                    : trade.direction === "BUY"
-                      ? "↑ BUY SIGNAL"
-                      : "↓ SELL SIGNAL";
+                  ? "🔀 ARB SCAN"
+                  : trade.direction === "BUY"
+                  ? "↑ BUY SIGNAL"
+                  : "↓ SELL SIGNAL";
                 const badgeClass = isAllocation
                   ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                   : isArb
-                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                    : trade.direction === "BUY"
-                      ? "bg-green-500/10 text-green-400 border-green-500/20"
-                      : "bg-red-500/10 text-red-400 border-red-500/20";
+                  ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                  : trade.direction === "BUY"
+                  ? "bg-green-500/10 text-green-400 border-green-500/20"
+                  : "bg-red-500/10 text-red-400 border-red-500/20";
                 return (
-                <Card key={trade.id} className="bg-zinc-900 border-zinc-800">
-                  <CardContent className="py-4 px-5">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <Badge className={badgeClass}>
-                          {badgeLabel}
-                        </Badge>
-                        <span className="text-white font-medium">
-                          {trade.asset}
-                        </span>
-                        <span className="text-zinc-400 text-sm">
-                          ${formatUSDC(trade.sizeUSDC)} USDC
-                        </span>
-                        <span className="text-zinc-600 text-sm">
-                          @ ${formatPrice(trade.priceUSD).toLocaleString()}
+                  <Card key={trade.id} className="bg-zinc-900 border-zinc-800">
+                    <CardContent className="py-4 px-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <Badge className={badgeClass}>{badgeLabel}</Badge>
+                          <span className="text-white font-medium">
+                            {trade.asset}
+                          </span>
+                          <span className="text-zinc-400 text-sm">
+                            ${formatUSDC(trade.sizeUSDC)} USDC
+                          </span>
+                          <span className="text-zinc-600 text-sm">
+                            @ ${formatPrice(trade.priceUSD).toLocaleString()}
+                          </span>
+
+                          {isSettled && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                padding: "2px 8px",
+                                borderRadius: "99px",
+                                background: dbTrade?.won
+                                  ? "#0d1f13"
+                                  : "#1f0d0d",
+                                color: dbTrade?.won ? "#4ade80" : "#f87171",
+                                border: `1px solid ${
+                                  dbTrade?.won ? "#15803d" : "#991b1b"
+                                }`,
+                              }}
+                            >
+                              {dbTrade?.won
+                                ? `✓ Won · +${(
+                                    (dbTrade.pnl_bps ?? 0) / 100
+                                  ).toFixed(2)}%`
+                                : `✗ Lost · ${(
+                                    (dbTrade?.pnl_bps ?? 0) / 100
+                                  ).toFixed(2)}%`}
+                            </span>
+                          )}
+
+                          {!isSettled && !isAllocation && !isArb && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                padding: "2px 8px",
+                                borderRadius: "99px",
+                                background: "#111",
+                                color: "#52525b",
+                                border: "1px solid #27272a",
+                              }}
+                            >
+                              ⏳ Settling...
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-zinc-600 shrink-0">
+                          {new Date(
+                            Number(trade.timestamp) * 1000,
+                          ).toLocaleTimeString()}
                         </span>
                       </div>
-                      <span className="text-xs text-zinc-600">
-                        {new Date(
-                          Number(trade.timestamp) * 1000,
-                        ).toLocaleTimeString()}
-                      </span>
-                    </div>
-                    <div className="bg-zinc-800 rounded-md px-4 py-3 mb-3">
-                      <p className="text-xs text-zinc-500 mb-1">
-                        Agent reasoning
-                      </p>
-                      <ReasonText
-                        reasonHash={trade.reasonHash}
-                        agentId={agentId!}
-                      />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <a
-                        href={`https://testnet.kitescan.ai/tx/${trade.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-400 hover:underline"
-                      >
-                        View decision proof on Kite ↗
-                      </a>
-                      <span className="text-xs text-zinc-600 font-mono">
-                        Hash: {trade.reasonHash?.slice(0, 18)}...
-                      </span>
-                      <span className="text-xs text-green-500">✓ Verified</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="bg-zinc-800 rounded-md px-4 py-3 mb-3">
+                        <p className="text-xs text-zinc-500 mb-1">
+                          Agent reasoning
+                        </p>
+                        <ReasonText
+                          reasonHash={trade.reasonHash}
+                          agentId={agentId!}
+                        />
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <a
+                          href={`https://testnet.kitescan.ai/tx/${trade.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-400 hover:underline"
+                        >
+                          View decision proof on Kite ↗
+                        </a>
+                        <span className="text-xs text-zinc-600 font-mono">
+                          Hash: {trade.reasonHash?.slice(0, 18)}...
+                        </span>
+                        <span className="text-xs text-green-500">
+                          ✓ Verified
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
                 );
               })}
             </div>

@@ -15,51 +15,70 @@ import { reputationRegistry } from "../services/contractService";
 // ── Evaluate outcome 5 minutes after decision ─────────────
 async function settleDecisionOutcome(
   agentWallet: string,
-  asset: string,
-  direction: string,
-  entryPrice: number,
-  agentId: number,
-  tradeDbId: number
+  asset:       string,
+  direction:   string,
+  entryPrice:  number,
+  agentId:     number,
+  tradeDbId:   number
 ): Promise<void> {
-  await new Promise((r) => setTimeout(r, 5 * 60 * 1000));
+  console.log(`[Settlement] Scheduled: ${asset} ${direction} @ $${entryPrice}`);
+  await new Promise(r => setTimeout(r, 5 * 60 * 1000));
+  console.log(`[Settlement] Running for ${asset}...`);
 
   try {
     const assetMap: Record<string, string> = {
-      ETH: "ethereum",
-      BTC: "bitcoin",
-      SOL: "solana",
+      ETH:  "ethereum",
+      BTC:  "bitcoin",
+      SOL:  "solana",
+      AVAX: "avalanche-2",
     };
 
     const coinId = assetMap[asset] ?? "ethereum";
-    const signal = await getMarketSignal(asset, coinId);
-    const exitPrice = signal.price;
-    const priceMove = ((exitPrice - entryPrice) / entryPrice) * 10000; // bps
+    let exitPrice = entryPrice; // fallback to entry price if fetch fails
 
-    const won =
-      direction === "BUY" ? exitPrice > entryPrice : exitPrice < entryPrice;
-    const pnlBps =
-      direction === "BUY" ? Math.round(priceMove) : Math.round(-priceMove);
+    try {
+      const signal = await getMarketSignal(asset, coinId);
+      exitPrice    = signal.price;
+    } catch (err) {
+      console.warn(`[Settlement] Price fetch failed for ${asset}, using entry price`);
+    }
 
-    console.log(`[Agent ${agentId}] Settling decision: ${asset} ${direction}`);
-    console.log(`   Entry: $${entryPrice} → Exit: $${exitPrice}`);
-    console.log(`   Result: ${won ? "✅ WON" : "❌ LOST"} (${pnlBps} bps)`);
+    const won    = direction === "BUY" ? exitPrice > entryPrice : exitPrice < entryPrice;
+    const pnlBps = direction === "BUY"
+      ? Math.round(((exitPrice - entryPrice) / entryPrice) * 10000)
+      : Math.round(((entryPrice - exitPrice) / entryPrice) * 10000);
 
-    const tx = await reputationRegistry.recordTrade(
-      agentWallet,
-      won,
-      BigInt(pnlBps)
+    console.log(`[Settlement] ${asset}: Entry $${entryPrice} → Exit $${exitPrice}`);
+    console.log(`[Settlement] Result: ${won ? "✅ WON" : "❌ LOST"} (${pnlBps} bps)`);
+
+    // Update DB
+    await query(
+      `UPDATE trades SET won = $1, pnl_bps = $2 WHERE id = $3`,
+      [won, pnlBps, tradeDbId]
     );
+
+    // Record on ReputationRegistry
+    const { ethers }   = await import("ethers");
+    const provider     = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
+    const wallet       = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+    const registryPath = require("path").resolve(
+      __dirname,
+      "../../../contracts/artifacts/contracts/ReputationRegistry.sol/ReputationRegistry.json"
+    );
+    const abi      = JSON.parse(require("fs").readFileSync(registryPath, "utf8")).abi;
+    const registry = new ethers.Contract(
+      process.env.REPUTATION_REGISTRY_ADDRESS!,
+      abi,
+      wallet
+    );
+
+    const tx = await registry.recordTrade(agentWallet, won, BigInt(pnlBps));
     await tx.wait();
 
-    console.log(`[Agent ${agentId}] ✅ Reputation updated on Kite chain`);
+    console.log(`[Settlement] ✅ Reputation updated on Kite chain`);
 
-    await query(`UPDATE trades SET won = $1, pnl_bps = $2 WHERE id = $3`, [
-      won,
-      pnlBps,
-      tradeDbId,
-    ]);
   } catch (err) {
-    console.error(`[Agent ${agentId}] Settlement error:`, err);
+    console.error(`[Settlement] Error for ${asset}:`, err);
   }
 }
 

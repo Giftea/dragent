@@ -57,7 +57,10 @@ Write ONE sentence starting with "${action === "BUY" ? "Buying" : "Selling"}". S
     ]
   });
 
-  return (message.content[0] as { text: string }).text.trim();
+  return (message.content[0] as { text: string }).text
+    .trim()
+    .replace(/\*\*/g, "")
+    .replace(/\*/g, "");
 }
 
 // ── Hash the reason and log it on Kite chain ──────────────

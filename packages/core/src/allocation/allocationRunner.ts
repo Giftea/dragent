@@ -40,7 +40,8 @@ export async function runAllocationCycle(
     }
 
     const { recommended, reason } = decision;
-    const asset      = `${recommended.asset}-${recommended.protocol}`;
+    const protocol   = recommended.protocol.replace(/-/g, " ");
+    const asset      = `${recommended.asset.split("-")[0]}-${protocol}`;
     const journal    = loadTradeJournal();
     const reasonHash = ethers.keccak256(ethers.toUtf8Bytes(reason));
 
