@@ -11,27 +11,34 @@ export interface MarketSignal {
   timestamp:      number;
 }
 
-// ── Simple price cache to avoid rate limits ───────────────
-const priceCache = new Map<string, { price: number; timestamp: number }>();
-const CACHE_TTL  = 30_000; // 30 seconds
-
-async function fetchPriceData(coinId: string): Promise<{
-  price: number;
-  change4h: number;
+// ── Shared price cache ────────────────────────────────────
+const priceCache = new Map<string, {
+  price:     number;
+  change4h:  number;
   volume24h: number;
-}> {
-  const cached = priceCache.get(coinId);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return { price: cached.price, change4h: 0, volume24h: 0 };
-  }
+  timestamp: number;
+}>();
+const PRICE_CACHE_TTL = 60_000; // 60 seconds
+
+// ── Batch fetch all prices in one request ─────────────────
+const ALL_COIN_IDS = ["ethereum", "bitcoin", "solana", "avalanche-2"];
+
+async function batchFetchAllPrices(): Promise<void> {
+  const now = Date.now();
+
+  const allFresh = ALL_COIN_IDS.every(id => {
+    const c = priceCache.get(id);
+    return c && now - c.timestamp < PRICE_CACHE_TTL;
+  });
+  if (allFresh) return;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const res = await axios.get(
-        `https://api.coingecko.com/api/v3/simple/price`,
+        "https://api.coingecko.com/api/v3/simple/price",
         {
           params: {
-            ids:                 coinId,
+            ids:                 ALL_COIN_IDS.join(","),
             vs_currencies:       "usd",
             include_24hr_vol:    true,
             include_24hr_change: true,
@@ -39,20 +46,23 @@ async function fetchPriceData(coinId: string): Promise<{
         }
       );
 
-      const data   = res.data[coinId];
-      const result = {
-        price:     data.usd,
-        change4h:  data.usd_24h_change / 6,
-        volume24h: data.usd_24h_vol,
-      };
-
-      priceCache.set(coinId, { price: data.usd, timestamp: Date.now() });
-      return result;
+      for (const coinId of ALL_COIN_IDS) {
+        const d = res.data[coinId];
+        if (d) {
+          priceCache.set(coinId, {
+            price:     d.usd,
+            change4h:  (d.usd_24h_change ?? 0) / 6,
+            volume24h: d.usd_24h_vol ?? 0,
+            timestamp: now,
+          });
+        }
+      }
+      return;
 
     } catch (err: unknown) {
       const status = (err as { response?: { status: number } }).response?.status;
       if (status === 429 && attempt < 3) {
-        const wait = attempt * 10_000; // 10s, 20s
+        const wait = attempt * 15_000;
         console.warn(`⚠️  CoinGecko rate limit, waiting ${wait / 1000}s...`);
         await new Promise(r => setTimeout(r, wait));
         continue;
@@ -60,13 +70,30 @@ async function fetchPriceData(coinId: string): Promise<{
       throw err;
     }
   }
+}
 
-  throw new Error(`Failed to fetch price for ${coinId}`);
+async function fetchPriceData(coinId: string): Promise<{
+  price:     number;
+  change4h:  number;
+  volume24h: number;
+}> {
+  await batchFetchAllPrices();
+
+  const cached = priceCache.get(coinId);
+  if (cached) {
+    return {
+      price:     cached.price,
+      change4h:  cached.change4h,
+      volume24h: cached.volume24h,
+    };
+  }
+
+  throw new Error(`No price data for ${coinId}`);
 }
 
 // ── OHLC cache ────────────────────────────────────────────
 const ohlcCache = new Map<string, { closes: number[]; timestamp: number }>();
-const OHLC_CACHE_TTL = 5 * 60_000; // 5 minutes — OHLC doesn't change that fast
+const OHLC_CACHE_TTL = 10 * 60_000; // 10 minutes
 
 async function fetchOHLC(coinId: string): Promise<number[]> {
   const cached = ohlcCache.get(coinId);

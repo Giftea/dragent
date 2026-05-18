@@ -123,7 +123,7 @@ export async function startAgent(config: AgentConfig) {
     } catch (err) {
       console.error(`Agent ${config.agentId} cycle error:`, err);
     }
-  }, 90_000); // every 90 seconds instead of 60
+  }, 2 * 60_000); // every 2 minutes
 
   runningAgents.set(config.agentId, interval);
 

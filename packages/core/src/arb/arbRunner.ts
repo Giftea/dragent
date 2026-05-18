@@ -65,6 +65,11 @@ async function settleArbOutcome(
   agentWallet: string,
   opportunity: ArbOpportunity
 ): Promise<void> {
+  if (!opportunity.profitable) {
+    console.log(`[Arb Settlement] Skipping unprofitable scan for ${opportunity.asset}`);
+    return;
+  }
+
   await new Promise(r => setTimeout(r, 10 * 60 * 1000));
 
   try {

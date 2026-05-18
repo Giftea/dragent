@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "src/index.ts",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc --project tsconfig.json",
+    "dev": "tsc --watch"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
