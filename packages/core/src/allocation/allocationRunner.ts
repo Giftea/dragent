@@ -1,21 +1,13 @@
 import { ethers }           from "ethers";
-import * as path             from "path";
-import * as fs               from "fs";
 import * as dotenv           from "dotenv";
 import { analyzeAllocation } from "./allocationAgent";
+import { TRADE_JOURNAL_ABI } from "../abis";
 dotenv.config();
 
 function loadTradeJournal() {
   const provider = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
   const wallet   = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
-
-  const artifactPath = path.resolve(
-    __dirname,
-    "../../../contracts/artifacts/contracts/TradeJournal.sol/TradeJournal.json"
-  );
-  const abi = JSON.parse(fs.readFileSync(artifactPath, "utf8")).abi;
-
-  return new ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS!, abi, wallet);
+  return new ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS!, TRADE_JOURNAL_ABI, wallet);
 }
 
 export interface AllocationCycleResult {

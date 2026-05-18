@@ -22,3 +22,4 @@ export declare function evaluateSignal(signal: MarketSignal, rules: TradingRules
     action: "BUY" | "SELL" | "HOLD";
     reason: string;
 };
+//# sourceMappingURL=interpreter.d.ts.map

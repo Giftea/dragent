@@ -5,6 +5,7 @@ import {
   TradingRules,
   runArbCycle,
   runAllocationCycle,
+  REPUTATION_REGISTRY_ABI,
 } from "@dragent/core";
 import { ethers } from "ethers";
 import { query } from "../db";
@@ -58,17 +59,11 @@ async function settleDecisionOutcome(
     );
 
     // Record on ReputationRegistry
-    const { ethers }   = await import("ethers");
-    const provider     = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
-    const wallet       = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
-    const registryPath = require("path").resolve(
-      __dirname,
-      "../../../contracts/artifacts/contracts/ReputationRegistry.sol/ReputationRegistry.json"
-    );
-    const abi      = JSON.parse(require("fs").readFileSync(registryPath, "utf8")).abi;
+    const provider = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
+    const wallet   = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
     const registry = new ethers.Contract(
       process.env.REPUTATION_REGISTRY_ADDRESS!,
-      abi,
+      REPUTATION_REGISTRY_ABI,
       wallet
     );
 

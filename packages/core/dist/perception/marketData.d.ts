@@ -10,3 +10,4 @@ export interface MarketSignal {
 }
 export declare function getMarketSignal(asset: string, // e.g. "ETH"
 coinId?: string): Promise<MarketSignal>;
+//# sourceMappingURL=marketData.d.ts.map

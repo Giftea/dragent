@@ -1,0 +1,1 @@
+{"version":3,"file":"allocationRunner.d.ts","sourceRoot":"","sources":["../../src/allocation/allocationRunner.ts"],"names":[],"mappings":"AAYA,MAAM,WAAW,qBAAqB;IACpC,MAAM,EAAM,MAAM,CAAC;IACnB,UAAU,EAAE,MAAM,CAAC;IACnB,MAAM,EAAM,MAAM,CAAC;IACnB,KAAK,EAAO,MAAM,CAAC;IACnB,GAAG,EAAS,MAAM,CAAC;CACpB;AAED,wBAAsB,kBAAkB,CACtC,OAAO,EAAE,MAAM,GACd,OAAO,CAAC,qBAAqB,GAAG,IAAI,CAAC,CAwCvC"}

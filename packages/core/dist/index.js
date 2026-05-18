@@ -24,3 +24,4 @@ __exportStar(require("./arb/arbRunner"), exports);
 __exportStar(require("./allocation/protocolMonitor"), exports);
 __exportStar(require("./allocation/allocationAgent"), exports);
 __exportStar(require("./allocation/allocationRunner"), exports);
+__exportStar(require("./abis"), exports);

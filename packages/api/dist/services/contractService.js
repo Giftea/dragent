@@ -38,19 +38,14 @@ exports.deployUserVault = deployUserVault;
 exports.getAgentStats = getAgentStats;
 exports.getRecentTrades = getRecentTrades;
 const ethers_1 = require("ethers");
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
 const dotenv = __importStar(require("dotenv"));
+const core_1 = require("@dragent/core");
 dotenv.config();
 const provider = new ethers_1.ethers.JsonRpcProvider(process.env.KITE_RPC);
 const deployer = new ethers_1.ethers.Wallet(process.env.PRIVATE_KEY, provider);
-function loadAbi(contractName) {
-    const p = path.resolve(__dirname, `../../../contracts/artifacts/contracts/${contractName}.sol/${contractName}.json`);
-    return JSON.parse(fs.readFileSync(p, "utf8")).abi;
-}
-exports.factory = new ethers_1.ethers.Contract(process.env.AGENT_VAULT_FACTORY_ADDRESS, loadAbi("AgentVaultFactory"), deployer);
-exports.tradeJournal = new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, loadAbi("TradeJournal"), deployer);
-exports.reputationRegistry = new ethers_1.ethers.Contract(process.env.REPUTATION_REGISTRY_ADDRESS, loadAbi("ReputationRegistry"), deployer);
+exports.factory = new ethers_1.ethers.Contract(process.env.AGENT_VAULT_FACTORY_ADDRESS, core_1.AGENT_VAULT_FACTORY_ABI, deployer);
+exports.tradeJournal = new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, core_1.TRADE_JOURNAL_ABI, deployer);
+exports.reputationRegistry = new ethers_1.ethers.Contract(process.env.REPUTATION_REGISTRY_ADDRESS, core_1.REPUTATION_REGISTRY_ABI, deployer);
 // Deploy a vault for a new user via the factory
 async function deployUserVault(agentWallet, maxDrawdownBps = 1000, maxPositionSizeBps = 200, maxDailySpendUSDC = 100 * 1e6, cooldownSeconds = 3600) {
     try {

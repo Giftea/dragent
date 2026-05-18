@@ -6,8 +6,7 @@ import {
 import { getAvalanchePrice, prefetchAllPrices } from "../perception/avalancheData";
 import { ethers }  from "ethers";
 import * as dotenv from "dotenv";
-import * as path   from "path";
-import * as fs     from "fs";
+import { TRADE_JOURNAL_ABI, REPUTATION_REGISTRY_ABI } from "../abis";
 dotenv.config();
 
 const ARB_ASSETS = ["ETH", "BTC", "AVAX"];
@@ -16,23 +15,14 @@ function loadContracts() {
   const provider = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
   const wallet   = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 
-  const journalPath = path.resolve(
-    __dirname,
-    "../../../contracts/artifacts/contracts/TradeJournal.sol/TradeJournal.json"
-  );
-  const registryPath = path.resolve(
-    __dirname,
-    "../../../contracts/artifacts/contracts/ReputationRegistry.sol/ReputationRegistry.json"
-  );
-
   const journal = new ethers.Contract(
     process.env.TRADE_JOURNAL_ADDRESS!,
-    JSON.parse(fs.readFileSync(journalPath, "utf8")).abi,
+    TRADE_JOURNAL_ABI,
     wallet
   );
   const registry = new ethers.Contract(
     process.env.REPUTATION_REGISTRY_ADDRESS!,
-    JSON.parse(fs.readFileSync(registryPath, "utf8")).abi,
+    REPUTATION_REGISTRY_ABI,
     wallet
   );
 

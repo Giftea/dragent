@@ -5,3 +5,4 @@ export declare function logTradeOnChain(signal: MarketSignal, action: "BUY" | "S
     reasonHash: string;
     txHash: string;
 }>;
+//# sourceMappingURL=reasonGenerator.d.ts.map

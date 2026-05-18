@@ -8,3 +8,4 @@ export interface AvalanchePrice {
 export declare function getAvalanchePrice(asset: string): Promise<AvalanchePrice>;
 export declare function getKitePrice(asset: string): Promise<AvalanchePrice>;
 export declare function prefetchAllPrices(): Promise<void>;
+//# sourceMappingURL=avalancheData.d.ts.map

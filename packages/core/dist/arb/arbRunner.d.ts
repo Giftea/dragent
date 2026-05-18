@@ -11,3 +11,4 @@ export interface ArbCycleResult {
     txHash: string;
 }
 export declare function runArbCycle(agentId: number, agentWallet: string): Promise<ArbCycleResult[]>;
+//# sourceMappingURL=arbRunner.d.ts.map

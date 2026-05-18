@@ -40,19 +40,13 @@ exports.generateReason = generateReason;
 exports.logTradeOnChain = logTradeOnChain;
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 const ethers_1 = require("ethers");
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
 const dotenv = __importStar(require("dotenv"));
+const abis_1 = require("../abis");
 dotenv.config();
 // ── Provider + wallet ─────────────────────────────────────
 const provider = new ethers_1.ethers.JsonRpcProvider(process.env.KITE_RPC);
 const wallet = new ethers_1.ethers.Wallet(process.env.PRIVATE_KEY, provider);
-// ── Load TradeJournal ABI + contract ──────────────────────
-function loadAbi(contractName) {
-    const p = path.resolve(__dirname, `../../../contracts/artifacts/contracts/${contractName}.sol/${contractName}.json`);
-    return JSON.parse(fs.readFileSync(p, "utf8")).abi;
-}
-const tradeJournal = new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, loadAbi("TradeJournal"), wallet);
+const tradeJournal = new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, abis_1.TRADE_JOURNAL_ABI, wallet);
 const anthropic = new sdk_1.default({ apiKey: process.env.ANTHROPIC_API_KEY });
 // ── Generate human-readable trade reason via Claude ───────
 async function generateReason(signal, action, sizeUSDC, strategy) {

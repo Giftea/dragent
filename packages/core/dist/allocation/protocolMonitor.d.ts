@@ -17,3 +17,4 @@ export interface AllocationDecision {
 }
 export declare function fetchProtocolYields(): Promise<ProtocolYield[]>;
 export declare function findBestYield(yields: ProtocolYield[], maxRisk?: "low" | "medium" | "high", preferredAsset?: string): ProtocolYield | null;
+//# sourceMappingURL=protocolMonitor.d.ts.map

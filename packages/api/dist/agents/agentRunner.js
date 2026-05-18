@@ -1,37 +1,4 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.startAgent = startAgent;
 exports.stopAgent = stopAgent;
@@ -74,12 +41,9 @@ async function settleDecisionOutcome(agentWallet, asset, direction, entryPrice, 
         // Update DB
         await (0, db_1.query)(`UPDATE trades SET won = $1, pnl_bps = $2 WHERE id = $3`, [won, pnlBps, tradeDbId]);
         // Record on ReputationRegistry
-        const { ethers } = await Promise.resolve().then(() => __importStar(require("ethers")));
-        const provider = new ethers.JsonRpcProvider(process.env.KITE_RPC);
-        const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-        const registryPath = require("path").resolve(__dirname, "../../../contracts/artifacts/contracts/ReputationRegistry.sol/ReputationRegistry.json");
-        const abi = JSON.parse(require("fs").readFileSync(registryPath, "utf8")).abi;
-        const registry = new ethers.Contract(process.env.REPUTATION_REGISTRY_ADDRESS, abi, wallet);
+        const provider = new ethers_1.ethers.JsonRpcProvider(process.env.KITE_RPC);
+        const wallet = new ethers_1.ethers.Wallet(process.env.PRIVATE_KEY, provider);
+        const registry = new ethers_1.ethers.Contract(process.env.REPUTATION_REGISTRY_ADDRESS, core_1.REPUTATION_REGISTRY_ABI, wallet);
         const tx = await registry.recordTrade(agentWallet, won, BigInt(pnlBps));
         await tx.wait();
         console.log(`[Settlement] ✅ Reputation updated on Kite chain`);

@@ -1,35 +1,30 @@
 import { ethers } from "ethers";
-import * as fs from "fs";
-import * as path from "path";
 import * as dotenv from "dotenv";
+import {
+  AGENT_VAULT_FACTORY_ABI,
+  TRADE_JOURNAL_ABI,
+  REPUTATION_REGISTRY_ABI,
+} from "@dragent/core";
 dotenv.config();
 
 const provider = new ethers.JsonRpcProvider(process.env.KITE_RPC!);
 const deployer  = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 
-function loadAbi(contractName: string) {
-  const p = path.resolve(
-    __dirname,
-   `../../../contracts/artifacts/contracts/${contractName}.sol/${contractName}.json`
-  );
-  return JSON.parse(fs.readFileSync(p, "utf8")).abi;
-}
-
 export const factory = new ethers.Contract(
   process.env.AGENT_VAULT_FACTORY_ADDRESS!,
-  loadAbi("AgentVaultFactory"),
+  AGENT_VAULT_FACTORY_ABI,
   deployer
 );
 
 export const tradeJournal = new ethers.Contract(
   process.env.TRADE_JOURNAL_ADDRESS!,
-  loadAbi("TradeJournal"),
+  TRADE_JOURNAL_ABI,
   deployer
 );
 
 export const reputationRegistry = new ethers.Contract(
   process.env.REPUTATION_REGISTRY_ADDRESS!,
-  loadAbi("ReputationRegistry"),
+  REPUTATION_REGISTRY_ABI,
   deployer
 );
 

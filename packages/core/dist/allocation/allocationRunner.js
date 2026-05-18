@@ -35,17 +35,14 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runAllocationCycle = runAllocationCycle;
 const ethers_1 = require("ethers");
-const path = __importStar(require("path"));
-const fs = __importStar(require("fs"));
 const dotenv = __importStar(require("dotenv"));
 const allocationAgent_1 = require("./allocationAgent");
+const abis_1 = require("../abis");
 dotenv.config();
 function loadTradeJournal() {
     const provider = new ethers_1.ethers.JsonRpcProvider(process.env.KITE_RPC);
     const wallet = new ethers_1.ethers.Wallet(process.env.PRIVATE_KEY, provider);
-    const artifactPath = path.resolve(__dirname, "../../../contracts/artifacts/contracts/TradeJournal.sol/TradeJournal.json");
-    const abi = JSON.parse(fs.readFileSync(artifactPath, "utf8")).abi;
-    return new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, abi, wallet);
+    return new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, abis_1.TRADE_JOURNAL_ABI, wallet);
 }
 async function runAllocationCycle(agentId) {
     console.log(`[Allocation Agent ${agentId}] Analysing DeFi yields...`);

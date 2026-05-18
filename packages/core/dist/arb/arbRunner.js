@@ -39,17 +39,14 @@ const arbDetector_1 = require("./arbDetector");
 const avalancheData_1 = require("../perception/avalancheData");
 const ethers_1 = require("ethers");
 const dotenv = __importStar(require("dotenv"));
-const path = __importStar(require("path"));
-const fs = __importStar(require("fs"));
+const abis_1 = require("../abis");
 dotenv.config();
 const ARB_ASSETS = ["ETH", "BTC", "AVAX"];
 function loadContracts() {
     const provider = new ethers_1.ethers.JsonRpcProvider(process.env.KITE_RPC);
     const wallet = new ethers_1.ethers.Wallet(process.env.PRIVATE_KEY, provider);
-    const journalPath = path.resolve(__dirname, "../../../contracts/artifacts/contracts/TradeJournal.sol/TradeJournal.json");
-    const registryPath = path.resolve(__dirname, "../../../contracts/artifacts/contracts/ReputationRegistry.sol/ReputationRegistry.json");
-    const journal = new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, JSON.parse(fs.readFileSync(journalPath, "utf8")).abi, wallet);
-    const registry = new ethers_1.ethers.Contract(process.env.REPUTATION_REGISTRY_ADDRESS, JSON.parse(fs.readFileSync(registryPath, "utf8")).abi, wallet);
+    const journal = new ethers_1.ethers.Contract(process.env.TRADE_JOURNAL_ADDRESS, abis_1.TRADE_JOURNAL_ABI, wallet);
+    const registry = new ethers_1.ethers.Contract(process.env.REPUTATION_REGISTRY_ADDRESS, abis_1.REPUTATION_REGISTRY_ABI, wallet);
     return { journal, registry, wallet };
 }
 async function logArbOpportunity(asset, reason, price, direction) {

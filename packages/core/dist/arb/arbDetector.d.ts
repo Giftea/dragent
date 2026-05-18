@@ -14,3 +14,4 @@ export interface ArbOpportunity {
 }
 export declare function detectArbOpportunity(asset: string): Promise<ArbOpportunity>;
 export declare function generateArbReason(opp: ArbOpportunity): Promise<string>;
+//# sourceMappingURL=arbDetector.d.ts.map

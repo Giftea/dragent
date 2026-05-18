@@ -8,3 +8,4 @@ export * from "./arb/arbRunner";
 export * from "./allocation/protocolMonitor";
 export * from "./allocation/allocationAgent";
 export * from "./allocation/allocationRunner";
+export * from "./abis";
