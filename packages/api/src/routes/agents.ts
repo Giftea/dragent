@@ -3,7 +3,6 @@ import { query } from "../db";
 import {
   deployUserVault,
   getAgentStats,
-  getRecentTrades,
   reputationRegistry,
 } from "../services/contractService";
 import {
@@ -148,7 +147,16 @@ router.get("/:id", async (req, res) => {
 
     const agent = agentRes.rows[0];
     const chainStats = await getAgentStats(agent.wallet);
-    const trades = await getRecentTrades(agent.wallet, 10);
+    const tradesRes = await query(
+      `SELECT trade_id, asset, direction, size_usdc, price_usd,
+              reason, reason_hash, tx_hash, won, pnl_bps, created_at
+       FROM trades
+       WHERE agent_id = $1
+       ORDER BY created_at DESC
+       LIMIT 10`,
+      [agentId]
+    );
+    const trades = tradesRes.rows;
 
     return res.json({
       ...agent,

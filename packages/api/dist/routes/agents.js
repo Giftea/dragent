@@ -113,7 +113,13 @@ router.get("/:id", async (req, res) => {
         }
         const agent = agentRes.rows[0];
         const chainStats = await (0, contractService_1.getAgentStats)(agent.wallet);
-        const trades = await (0, contractService_1.getRecentTrades)(agent.wallet, 10);
+        const tradesRes = await (0, db_1.query)(`SELECT trade_id, asset, direction, size_usdc, price_usd,
+              reason, reason_hash, tx_hash, won, pnl_bps, created_at
+       FROM trades
+       WHERE agent_id = $1
+       ORDER BY created_at DESC
+       LIMIT 10`, [agentId]);
+        const trades = tradesRes.rows;
         return res.json({
             ...agent,
             chainStats,

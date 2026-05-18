@@ -36,7 +36,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.reputationRegistry = exports.tradeJournal = exports.factory = void 0;
 exports.deployUserVault = deployUserVault;
 exports.getAgentStats = getAgentStats;
-exports.getRecentTrades = getRecentTrades;
 const ethers_1 = require("ethers");
 const dotenv = __importStar(require("dotenv"));
 const core_1 = require("@dragent/core");
@@ -92,18 +91,4 @@ async function getAgentStats(agentAddress) {
         tier: Number(tier),
         budgetLimit: budgetLimit.toString(),
     };
-}
-// Get recent trades for an agent from chain
-async function getRecentTrades(agentAddress, n = 10) {
-    const trades = await exports.tradeJournal.getRecentTrades(agentAddress, n);
-    return trades.map((t) => ({
-        tradeId: Number(t.tradeId),
-        agentId: t.agentId,
-        timestamp: Number(t.timestamp),
-        asset: t.asset,
-        direction: t.direction,
-        sizeUSDC: Number(t.sizeUSDC) / 1e6,
-        priceUSD: Number(t.priceUSD) / 1e8,
-        reasonHash: t.reasonHash,
-    }));
 }

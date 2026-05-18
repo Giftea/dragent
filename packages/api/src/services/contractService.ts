@@ -90,26 +90,3 @@ export async function getAgentStats(agentAddress: string) {
   };
 }
 
-// Get recent trades for an agent from chain
-export async function getRecentTrades(agentAddress: string, n = 10) {
-  const trades = await tradeJournal.getRecentTrades(agentAddress, n);
-  return trades.map((t: {
-    tradeId: bigint;
-    agentId: string;
-    timestamp: bigint;
-    asset: string;
-    direction: string;
-    sizeUSDC: bigint;
-    priceUSD: bigint;
-    reasonHash: string;
-  }) => ({
-    tradeId:    Number(t.tradeId),
-    agentId:    t.agentId,
-    timestamp:  Number(t.timestamp),
-    asset:      t.asset,
-    direction:  t.direction,
-    sizeUSDC:   Number(t.sizeUSDC) / 1e6,
-    priceUSD:   Number(t.priceUSD) / 1e8,
-    reasonHash: t.reasonHash,
-  }));
-}
