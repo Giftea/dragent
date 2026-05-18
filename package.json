@@ -1,23 +1,12 @@
 {
-  "name": "dragent",
+  "name": "kite-trading-agent",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
     "packages/*"
   ],
   "scripts": {
-    "build": "turbo build",
-    "dev": "turbo dev",
-    "test": "turbo test",
-    "contracts:compile": "turbo run compile --filter=@dragent/contracts",
-    "contracts:deploy": "turbo run deploy --filter=@dragent/contracts",
-    "api:dev": "turbo run dev --filter=@dragent/api",
-    "web:dev": "turbo run dev --filter=@dragent/web"
-  },
-  "devDependencies": {
-    "turbo": "latest"
-  },
-  "dependencies": {
-    "@openzeppelin/contracts": "^5.6.1"
+    "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/api",
+    "start": "node packages/api/dist/index.js"
   }
 }
