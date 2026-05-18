@@ -1,17 +1,10 @@
 {
   "name": "@dragent/core",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "dev": "tsc --watch"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0",
-    "axios": "^1.6.0",
-    "ethers": "^6.0.0"
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0"
+    "dev":   "tsc --watch"
   }
 }
