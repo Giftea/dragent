@@ -5,6 +5,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc --project tsconfig.json",
-    "dev":   "tsc --watch"
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.96.0"
   }
 }

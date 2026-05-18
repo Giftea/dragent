@@ -2,9 +2,10 @@
   "name": "kite-trading-agent",
   "version": "1.0.0",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "workspaces": ["packages/*"],
   "scripts": {
     "build": "npm run build --workspace=packages/core && npm run build --workspace=packages/api",
     "start": "node packages/api/dist/index.js"
