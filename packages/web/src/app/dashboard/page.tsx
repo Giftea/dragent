@@ -570,6 +570,7 @@ export default function DashboardPage() {
                         reason: string;
                         won: boolean | null;
                         pnl_bps: number | null;
+                        tx_hash: string;
                       }[]
                     | undefined
                 )?.find((t) => t.reason_hash === trade.reasonHash);
@@ -668,7 +669,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <a
-                          href={`https://testnet.kitescan.ai/tx/${trade.id}`}
+                          href={`https://testnet.kitescan.ai/tx/${dbTrade?.tx_hash || ''}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs text-blue-400 hover:underline"

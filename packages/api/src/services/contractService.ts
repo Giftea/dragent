@@ -56,17 +56,32 @@ export async function deployUserVault(
     return event?.args?.vault;
 
   } catch (err: unknown) {
-    // If vault already exists, look it up from the factory
     const reason = (err as { reason?: string }).reason;
     if (reason === "Vault already exists") {
       console.log("Vault already exists — looking up existing vault...");
-      const existingVault = await factory.getVault(
-        new ethers.Wallet(process.env.PRIVATE_KEY!).address
-      );
-      if (existingVault && existingVault !== ethers.ZeroAddress) {
-        console.log("Found existing vault:", existingVault);
-        return existingVault;
+
+      try {
+        const existingVault = await factory.agentVault(agentWallet);
+        if (existingVault && existingVault !== ethers.ZeroAddress) {
+          console.log("✅ Found existing vault:", existingVault);
+          return existingVault;
+        }
+      } catch {
+        // agentVault lookup failed, try userVault
       }
+
+      try {
+        const userAddr = new ethers.Wallet(process.env.PRIVATE_KEY!).address;
+        const userVault = await factory.userVault(userAddr);
+        if (userVault && userVault !== ethers.ZeroAddress) {
+          console.log("✅ Found user vault:", userVault);
+          return userVault;
+        }
+      } catch {
+        // userVault lookup also failed
+      }
+
+      throw new Error("Vault exists but could not be retrieved");
     }
     throw err;
   }
